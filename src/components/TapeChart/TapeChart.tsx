@@ -16,6 +16,7 @@ import {
   Calendar
 } from "lucide-react";
 import { Room, RoomStatus } from "../../types";
+import { formatVND } from "../../utils/formatters";
 
 export const TapeChart: React.FC = () => {
   const {
@@ -143,10 +144,10 @@ export const TapeChart: React.FC = () => {
               className="bg-transparent font-medium focus:outline-none text-slate-100 cursor-pointer"
             >
               <option value="all" className="bg-slate-900 text-slate-100">All Room Types</option>
-              <option value="std-single" className="bg-slate-900 text-slate-100">Standard Single ($45)</option>
-              <option value="std-double" className="bg-slate-900 text-slate-100">Standard Double ($60)</option>
-              <option value="dlx-twin" className="bg-slate-900 text-slate-100">Deluxe Twin ($75)</option>
-              <option value="eco-suite" className="bg-slate-900 text-slate-100">Economy Suite ($110)</option>
+              <option value="std-single" className="bg-slate-900 text-slate-100">Standard Single (450.000đ)</option>
+              <option value="std-double" className="bg-slate-900 text-slate-100">Standard Double (600.000đ)</option>
+              <option value="dlx-twin" className="bg-slate-900 text-slate-100">Deluxe Twin (750.000đ)</option>
+              <option value="eco-suite" className="bg-slate-900 text-slate-100">Economy Suite (1.100.000đ)</option>
             </select>
           </div>
 
@@ -359,7 +360,7 @@ export const TapeChart: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg">{selectedRoomDetail.typeName}</h3>
-                  <p className="text-xs text-slate-400">Floor {selectedRoomDetail.floor} • Base Rate ${selectedRoomDetail.rate}/night</p>
+                  <p className="text-xs text-slate-400">Tầng {selectedRoomDetail.floor} • Giá gốc {formatVND(selectedRoomDetail.rate)}/đêm</p>
                 </div>
               </div>
               <button

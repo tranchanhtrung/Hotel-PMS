@@ -10,7 +10,8 @@ import {
   TerminalMode,
   Housekeeper,
   ReportSubmission,
-  RatePeriod
+  RatePeriod,
+  ServiceRateItem
 } from "../types";
 
 import { Language, translations } from "../i18n/translations";
@@ -22,6 +23,7 @@ interface PmsContextType {
   businessDate: string;
   roomTypes: RoomType[];
   ratePeriods: RatePeriod[];
+  serviceRates: ServiceRateItem[];
   rooms: Room[];
   housekeepers: Housekeeper[];
   reservations: Reservation[];
@@ -63,12 +65,17 @@ interface PmsContextType {
   deleteHousekeeper: (id: string) => Promise<boolean>;
   addFolioCharge: (data: any) => Promise<boolean>;
   createReservation: (data: any) => Promise<boolean>;
+  updateReservation: (data: any) => Promise<boolean>;
+  deleteReservation: (id: string) => Promise<boolean>;
   runNightAudit: () => Promise<boolean>;
   submitReportToDept: (data: any) => Promise<boolean>;
   saveRoomType: (data: any) => Promise<boolean>;
   saveRatePeriod: (data: any) => Promise<boolean>;
   deleteRatePeriod: (id: string) => Promise<boolean>;
   applyRatePeriod: (periodId: string) => Promise<boolean>;
+  saveServiceRate: (data: any) => Promise<boolean>;
+  deleteServiceRate: (id: string) => Promise<boolean>;
+  toggleServiceRate: (id: string) => Promise<boolean>;
   getAiInsights: () => Promise<string>;
 }
 
@@ -92,6 +99,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [businessDate, setBusinessDate] = useState<string>("2026-07-30");
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [ratePeriods, setRatePeriods] = useState<RatePeriod[]>([]);
+  const [serviceRates, setServiceRates] = useState<ServiceRateItem[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [housekeepers, setHousekeepers] = useState<Housekeeper[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -132,6 +140,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setBusinessDate(data.businessDate);
       setRoomTypes(data.roomTypes || []);
       setRatePeriods(data.ratePeriods || []);
+      setServiceRates(data.serviceRates || []);
       setRooms(data.rooms || []);
       setHousekeepers(data.housekeepers || []);
       setReservations(data.reservations || []);
@@ -339,6 +348,38 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateReservation = async (data: any) => {
+    try {
+      const res = await fetch("/api/pms/reservation/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Reservation update error", e);
+      return false;
+    }
+  };
+
+  const deleteReservation = async (id: string) => {
+    try {
+      const res = await fetch("/api/pms/reservation/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Reservation delete error", e);
+      return false;
+    }
+  };
+
   const runNightAudit = async () => {
     try {
       const res = await fetch("/api/pms/night-audit", { method: "POST" });
@@ -431,6 +472,54 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const saveServiceRate = async (data: any) => {
+    try {
+      const res = await fetch("/api/pms/settings/service-rates/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Save service rate error", e);
+      return false;
+    }
+  };
+
+  const deleteServiceRate = async (id: string) => {
+    try {
+      const res = await fetch("/api/pms/settings/service-rates/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Delete service rate error", e);
+      return false;
+    }
+  };
+
+  const toggleServiceRate = async (id: string) => {
+    try {
+      const res = await fetch("/api/pms/settings/service-rates/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Toggle service rate error", e);
+      return false;
+    }
+  };
+
   const getAiInsights = async () => {
     try {
       const res = await fetch("/api/pms/ai-insights", { method: "POST" });
@@ -451,6 +540,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         businessDate,
         roomTypes,
         ratePeriods,
+        serviceRates,
         rooms,
         housekeepers,
         reservations,
@@ -486,12 +576,17 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteHousekeeper,
         addFolioCharge,
         createReservation,
+        updateReservation,
+        deleteReservation,
         runNightAudit,
         submitReportToDept,
         saveRoomType,
         saveRatePeriod,
         deleteRatePeriod,
         applyRatePeriod,
+        saveServiceRate,
+        deleteServiceRate,
+        toggleServiceRate,
         getAiInsights
       }}
     >

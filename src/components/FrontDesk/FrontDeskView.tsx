@@ -15,6 +15,7 @@ import {
   ArrowUpDown
 } from "lucide-react";
 import { Reservation } from "../../types";
+import { formatVND } from "../../utils/formatters";
 
 export const FrontDeskView: React.FC = () => {
   const {
@@ -128,11 +129,11 @@ export const FrontDeskView: React.FC = () => {
             <CreditCard className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-2xl font-bold font-mono text-slate-100 mt-2">
-            ${totalPendingDue.toFixed(2)}
+            {formatVND(totalPendingDue)}
           </div>
           <span className="text-[11px] text-slate-400">
             {totalGuestCredit > 0
-              ? `+$${totalGuestCredit.toFixed(2)} in guest deposit credits`
+              ? `+${formatVND(totalGuestCredit)} in guest deposit credits`
               : "Pending balance across in-house"}
           </span>
         </div>
@@ -239,10 +240,10 @@ export const FrontDeskView: React.FC = () => {
                           }`}
                         >
                           {balance > 0
-                            ? `$${balance.toFixed(2)}`
+                            ? formatVND(balance)
                             : balance < 0
-                            ? `-$${Math.abs(balance).toFixed(2)}`
-                            : "$0.00"}
+                            ? `-${formatVND(Math.abs(balance))}`
+                            : "0.000 VNĐ"}
                         </div>
                         <span className="text-[9px] text-slate-400">
                           {balance > 0
@@ -299,7 +300,7 @@ export const FrontDeskView: React.FC = () => {
                       </span>
                     </td>
                     <td className="p-3 font-mono text-slate-400">Unassigned</td>
-                    <td className="p-3 text-right font-mono text-slate-300">${resv.totalAmount.toFixed(2)}</td>
+                    <td className="p-3 text-right font-mono text-slate-300">{formatVND(resv.totalAmount)}</td>
                     <td className="p-3 text-right">
                       <button
                         onClick={() => {
@@ -342,10 +343,10 @@ export const FrontDeskView: React.FC = () => {
                           }`}
                         >
                           {balance > 0
-                            ? `$${balance.toFixed(2)}`
+                            ? formatVND(balance)
                             : balance < 0
-                            ? `-$${Math.abs(balance).toFixed(2)}`
-                            : "$0.00"}
+                            ? `-${formatVND(Math.abs(balance))}`
+                            : "0.000 VNĐ"}
                         </div>
                         <span className="text-[9px] text-slate-400">
                           {balance > 0

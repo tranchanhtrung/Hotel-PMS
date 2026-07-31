@@ -11,74 +11,115 @@ app.use(express.json());
 // --- In-Memory Initial Seed Data for Economy Hotel (<100 rooms) ---
 // Total 72 Rooms across 4 Floors (101-118, 201-218, 301-318, 401-418)
 let roomTypesData = [
-  { id: "std-single", name: "Standard Single", baseRate: 45, maxGuests: 1, total: 24, description: "Compact 16m² room with Single Bed, AC, Work Desk, En-suite Shower" },
-  { id: "std-double", name: "Standard Double", baseRate: 60, maxGuests: 2, total: 28, description: "Comfortable 22m² room with Queen Bed, Smart TV, Mini Fridge" },
-  { id: "dlx-twin", name: "Deluxe Twin", baseRate: 75, maxGuests: 3, total: 14, description: "Spacious 28m² room with 2 Single Beds, City View, Coffee Maker" },
-  { id: "eco-suite", name: "Economy Suite", baseRate: 110, maxGuests: 4, total: 6, description: "Premium 38m² suite with Separate Living Area, King Bed, Bathtub" }
+  { id: "std-single", name: "Standard Single", baseRate: 450, maxGuests: 1, total: 24, description: "Phòng đơn tiêu chuẩn 16m², giường đơn, máy lạnh, bàn làm việc, phòng tắm riêng" },
+  { id: "std-double", name: "Standard Double", baseRate: 600, maxGuests: 2, total: 28, description: "Phòng đôi tiêu chuẩn 22m², giường đôi Queen, TV thông minh, tủ lạnh mini" },
+  { id: "dlx-twin", name: "Deluxe Twin", baseRate: 750, maxGuests: 3, total: 14, description: "Phòng đôi cao cấp 28m², 2 giường đơn, hướng phố, máy pha cà phê" },
+  { id: "eco-suite", name: "Economy Suite", baseRate: 1100, maxGuests: 3, total: 6, description: "Phòng Suite tiết kiệm 38m², phòng khách riêng, giường King, bồn tắm (Tối đa 3 khách)" }
 ];
 
+interface RatePeriod {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  rates: Record<string, number>;
+  multiplier: number;
+  isDefault: boolean;
+  notes: string;
+}
+
 // Seasonal & Multi-Period Rate Settings
-let ratePeriodsData = [
+let ratePeriodsData: RatePeriod[] = [
   {
     id: "period-default",
-    name: "Standard Base Rate Period",
+    name: "Mùa Tiêu Chuẩn (Standard Base)",
     startDate: "2026-01-01",
     endDate: "2026-12-31",
     rates: {
-      "std-single": 45,
-      "std-double": 60,
-      "dlx-twin": 75,
-      "eco-suite": 110
+      "std-single": 450,
+      "std-double": 600,
+      "dlx-twin": 750,
+      "eco-suite": 1100
     },
     multiplier: 1.0,
     isDefault: true,
-    notes: "Standard default year-round base tariff"
+    notes: "Bảng giá tiêu chuẩn mặc định quanh năm"
   },
   {
     id: "period-summer-peak",
-    name: "Summer Peak High Season",
+    name: "Mùa Cao Điểm Hè (Summer Peak)",
     startDate: "2026-06-01",
     endDate: "2026-08-31",
     rates: {
-      "std-single": 65,
-      "std-double": 85,
-      "dlx-twin": 110,
-      "eco-suite": 160
+      "std-single": 650,
+      "std-double": 850,
+      "dlx-twin": 1100,
+      "eco-suite": 1600
     },
     multiplier: 1.35,
     isDefault: false,
-    notes: "High summer tourism demand surge rate (+35%)"
+    notes: "Tăng giá mùa du lịch hè (+35%)"
   },
   {
     id: "period-holidays",
-    name: "Christmas & New Year Festive Peak",
+    name: "Cao Điểm Lễ Tết (Festive Peak)",
     startDate: "2026-12-20",
     endDate: "2027-01-05",
     rates: {
-      "std-single": 80,
-      "std-double": 100,
-      "dlx-twin": 130,
-      "eco-suite": 200
+      "std-single": 800,
+      "std-double": 1000,
+      "dlx-twin": 1300,
+      "eco-suite": 2000
     },
     multiplier: 1.6,
     isDefault: false,
-    notes: "Holiday peak festive season rate (+60%)"
+    notes: "Tăng giá dịp Giáng Sinh & Tết (+60%)"
   },
   {
     id: "period-low-autumn",
-    name: "Autumn Low Season Special",
+    name: "Khuyến Mãi Mùa Thấp Điểm (Low Season)",
     startDate: "2026-09-01",
     endDate: "2026-11-30",
     rates: {
-      "std-single": 38,
-      "std-double": 50,
-      "dlx-twin": 65,
-      "eco-suite": 95
+      "std-single": 380,
+      "std-double": 500,
+      "dlx-twin": 650,
+      "eco-suite": 950
     },
     multiplier: 0.85,
     isDefault: false,
-    notes: "Off-peak promotion discount period (-15%)"
+    notes: "Ưu đãi giảm giá mùa thấp điểm (-15%)"
   }
+];
+
+// Configured Tariff Rates for Services & Extra Fees
+let serviceRatesData = [
+  // Water / Minibar
+  { id: "srv-water-1", category: "water", name: "Nước suối Aquafina 500ml", unit: "chai", rate: 20, description: "Nước suối đóng chai minibar phòng", isAvailable: true },
+  { id: "srv-water-2", category: "water", name: "Nước khoáng Perrier 330ml", unit: "chai", rate: 50, description: "Nước khoáng thiên nhiên có ga", isAvailable: true },
+  { id: "srv-water-3", category: "water", name: "Nước ngọt (Coca-Cola / Pepsi / RedBull)", unit: "lon", rate: 30, description: "Đồ uống giải khát minibar", isAvailable: true },
+  { id: "srv-water-4", category: "water", name: "Bia Saigon Special / Tiger 330ml", unit: "lon", rate: 40, description: "Bia ướp lạnh minibar", isAvailable: true },
+
+  // Laundry
+  { id: "srv-laundry-1", category: "laundry", name: "Giặt sấy quần áo thông thường", unit: "kg", rate: 40, description: "Giặt sấy gấp gọn trong ngày (nhận trước 12:00)", isAvailable: true },
+  { id: "srv-laundry-2", category: "laundry", name: "Giặt hấp & Ủi sơ mi / Quần tây", unit: "cái", rate: 60, description: "Giặt hấp cao cấp bảo vệ chất liệu vải", isAvailable: true },
+  { id: "srv-laundry-3", category: "laundry", name: "Giặt khô Vest / Đầm dạ hội", unit: "bộ", rate: 120, description: "Giặt khô bảo quản trang phục cao cấp", isAvailable: true },
+
+  // Late Checkout
+  { id: "srv-checkout-1", category: "late_checkout", name: "Trả phòng muộn 1 - 2 giờ (Đến 14:00)", unit: "phòng", rate: 100, description: "Phụ thu trả phòng muộn dưới 2 tiếng", isAvailable: true },
+  { id: "srv-checkout-2", category: "late_checkout", name: "Trả phòng muộn 3 - 5 giờ (Đến 17:00)", unit: "phòng", rate: 300, description: "Phụ thu 50% tiền phòng theo quy định", isAvailable: true },
+  { id: "srv-checkout-3", category: "late_checkout", name: "Trả phòng sau 18:00 (Nguyên ngày)", unit: "phòng", rate: 600, description: "Tính 100% giá đêm phòng hiện tại", isAvailable: true },
+
+  // Extra Bed
+  { id: "srv-extrabed-1", category: "extra_bed", name: "Giường phụ nệm lót Extra Bed", unit: "đêm", rate: 250, description: "Kèm chăn ga gối nệm tiêu chuẩn 5 sao", isAvailable: true },
+  { id: "srv-extrabed-2", category: "extra_bed", name: "Phụ thu Khách thứ 3 (Không kèm giường)", unit: "người/đêm", rate: 150, description: "Phụ thu người lớn phát sinh ngoài định mức", isAvailable: true },
+  { id: "srv-extrabed-3", category: "extra_bed", name: "Bộ chăn gối phụ em bé", unit: "đêm", rate: 100, description: "Bộ chăn gối mềm dành cho trẻ nhỏ", isAvailable: true },
+
+  // Other Services
+  { id: "srv-other-1", category: "other", name: "Đưa đón sân bay (Xe 4 chỗ)", unit: "chuyến", rate: 350, description: "Đón tiễn sân bay Tân Sơn Nhất / Nội Bài", isAvailable: true },
+  { id: "srv-other-2", category: "other", name: "Thuê xe máy tay ga (24 giờ)", unit: "chiếc/ngày", rate: 150, description: "Bao gồm 2 mũ bảo hiểm & bản đồ du lịch", isAvailable: true },
+  { id: "srv-other-3", category: "other", name: "Phụ thu thú cưng nhỏ (< 5kg)", unit: "lượt", rate: 200, description: "Chi phí khử trùng vệ sinh phòng chuyên dụng", isAvailable: true },
+  { id: "srv-other-4", category: "other", name: "In ấn / Photo tài liệu A4", unit: "trang", rate: 5, description: "Hỗ trợ in ấn photo tại quầy lễ tân", isAvailable: true }
 ];
 
 function generateSeedRooms() {
@@ -93,16 +134,16 @@ function generateSeedRooms() {
 
       if (num <= 6) {
         roomTypeId = "std-single";
-        rate = 45;
+        rate = 450;
       } else if (num <= 13) {
         roomTypeId = "std-double";
-        rate = 60;
+        rate = 600;
       } else if (num <= 16) {
         roomTypeId = "dlx-twin";
-        rate = 75;
+        rate = 750;
       } else {
         roomTypeId = "eco-suite";
-        rate = 110;
+        rate = 1100;
       }
 
       // Assign initial varied statuses
@@ -164,13 +205,13 @@ let reservationsData: any[] = [
     checkInDate: "2026-07-29",
     checkOutDate: "2026-08-02",
     status: "checked_in", // confirmed, checked_in, checked_out, cancelled
-    totalAmount: 180,
-    paidAmount: 180,
+    totalAmount: 1800,
+    paidAmount: 1800,
     channel: "Walk-In",
     adults: 1,
     children: 0,
     keycardAssigned: "KC-105-A",
-    depositAmount: 50,
+    depositAmount: 500,
     createdAt: "2026-07-29T14:20:00Z"
   },
   {
@@ -186,13 +227,13 @@ let reservationsData: any[] = [
     checkInDate: "2026-07-30",
     checkOutDate: "2026-08-01",
     status: "checked_in",
-    totalAmount: 120,
-    paidAmount: 120,
+    totalAmount: 1200,
+    paidAmount: 1200,
     channel: "Booking.com",
     adults: 2,
     children: 0,
     keycardAssigned: "KC-210-A",
-    depositAmount: 50,
+    depositAmount: 500,
     createdAt: "2026-07-28T09:15:00Z"
   },
   {
@@ -208,7 +249,7 @@ let reservationsData: any[] = [
     checkInDate: "2026-07-30",
     checkOutDate: "2026-08-03",
     status: "confirmed", // expected arrival today
-    totalAmount: 300,
+    totalAmount: 3000,
     paidAmount: 0,
     channel: "Agoda",
     adults: 2,
@@ -230,13 +271,13 @@ let reservationsData: any[] = [
     checkInDate: "2026-07-28",
     checkOutDate: "2026-07-30",
     status: "checked_in", // expected departure today
-    totalAmount: 220,
-    paidAmount: 220,
+    totalAmount: 2200,
+    paidAmount: 2200,
     channel: "Direct Web",
     adults: 2,
     children: 0,
     keycardAssigned: "KC-417-A",
-    depositAmount: 100,
+    depositAmount: 1000,
     createdAt: "2026-07-20T11:00:00Z"
   }
 ];
@@ -249,15 +290,15 @@ let foliosData = [
     guestName: "Alexander Wright",
     roomNumber: "105",
     items: [
-      { id: "item-1", date: "2026-07-29", description: "Room Charge - Std Single", amount: 45, category: "room" },
-      { id: "item-2", date: "2026-07-29", description: "City Occupancy Tax (5%)", amount: 2.25, category: "tax" },
-      { id: "item-3", date: "2026-07-29", description: "Minibar - Bottled Mineral Water x2", amount: 4.00, category: "minibar" },
-      { id: "item-4", date: "2026-07-30", description: "Room Charge - Std Single", amount: 45, category: "room" },
-      { id: "item-5", date: "2026-07-30", description: "City Occupancy Tax (5%)", amount: 2.25, category: "tax" }
+      { id: "item-1", date: "2026-07-29", description: "Room Charge - Std Single", amount: 450, category: "room" },
+      { id: "item-2", date: "2026-07-29", description: "City Occupancy Tax (5%)", amount: 22.5, category: "tax" },
+      { id: "item-3", date: "2026-07-29", description: "Minibar - Bottled Mineral Water x2", amount: 40, category: "minibar" },
+      { id: "item-4", date: "2026-07-30", description: "Room Charge - Std Single", amount: 450, category: "room" },
+      { id: "item-5", date: "2026-07-30", description: "City Occupancy Tax (5%)", amount: 22.5, category: "tax" }
     ],
     payments: [
-      { id: "pay-1", date: "2026-07-29", description: "Credit Card Payment (Initial)", amount: 98.50, method: "Credit Card" },
-      { id: "pay-2", date: "2026-07-29", description: "Security Deposit Hold", amount: 50.00, method: "Credit Card" }
+      { id: "pay-1", date: "2026-07-29", description: "Credit Card Payment (Initial)", amount: 985, method: "Credit Card" },
+      { id: "pay-2", date: "2026-07-29", description: "Security Deposit Hold", amount: 500, method: "Credit Card" }
     ]
   },
   {
@@ -266,12 +307,12 @@ let foliosData = [
     guestName: "Elena Rostova",
     roomNumber: "210",
     items: [
-      { id: "item-10", date: "2026-07-30", description: "Room Charge - Std Double", amount: 60, category: "room" },
-      { id: "item-11", date: "2026-07-30", description: "City Occupancy Tax (5%)", amount: 3.00, category: "tax" },
-      { id: "item-12", date: "2026-07-30", description: "Express Laundry Service", amount: 12.00, category: "laundry" }
+      { id: "item-10", date: "2026-07-30", description: "Room Charge - Std Double", amount: 600, category: "room" },
+      { id: "item-11", date: "2026-07-30", description: "City Occupancy Tax (5%)", amount: 30, category: "tax" },
+      { id: "item-12", date: "2026-07-30", description: "Express Laundry Service", amount: 120, category: "laundry" }
     ],
     payments: [
-      { id: "pay-10", date: "2026-07-30", description: "Cash Payment", amount: 75.00, method: "Cash" }
+      { id: "pay-10", date: "2026-07-30", description: "Cash Payment", amount: 750, method: "Cash" }
     ]
   }
 ];
@@ -379,6 +420,7 @@ app.get("/api/pms/state", (req, res) => {
     businessDate,
     roomTypes: roomTypesData,
     ratePeriods: ratePeriodsData,
+    serviceRates: serviceRatesData,
     rooms: roomsData,
     housekeepers: housekeepersData,
     reservations: reservationsData,
@@ -408,33 +450,24 @@ app.post("/api/pms/settings/room-types/save", (req, res) => {
 
   let existingIndex = roomTypesData.findIndex(rt => rt.id === id);
   let updatedRoomType;
+  const numBaseRate = Number(baseRate);
 
   if (existingIndex >= 0) {
     roomTypesData[existingIndex] = {
       ...roomTypesData[existingIndex],
       name,
-      baseRate: Number(baseRate),
+      baseRate: numBaseRate,
       maxGuests: Number(maxGuests) || roomTypesData[existingIndex].maxGuests,
       total: Number(total) || roomTypesData[existingIndex].total,
       description: description || roomTypesData[existingIndex].description
     };
     updatedRoomType = roomTypesData[existingIndex];
-
-    // Sync room type name and default rate for vacant rooms
-    roomsData.forEach(room => {
-      if (room.typeId === updatedRoomType.id) {
-        room.typeName = updatedRoomType.name;
-        if (!room.status.startsWith("occupied")) {
-          room.rate = updatedRoomType.baseRate;
-        }
-      }
-    });
   } else {
     const newId = id || `rt-${Date.now()}`;
     updatedRoomType = {
       id: newId,
       name,
-      baseRate: Number(baseRate),
+      baseRate: numBaseRate,
       maxGuests: Number(maxGuests) || 2,
       total: Number(total) || 10,
       description: description || ""
@@ -442,17 +475,38 @@ app.post("/api/pms/settings/room-types/save", (req, res) => {
     roomTypesData.push(updatedRoomType);
   }
 
+  // Automatically update all seasonal rate periods based on their multipliers
+  ratePeriodsData.forEach(period => {
+    if (!period.rates) period.rates = {};
+    if (period.isDefault || period.id === "period-standard-base") {
+      period.rates[updatedRoomType.id] = numBaseRate;
+    } else {
+      const mult = period.multiplier || 1.0;
+      period.rates[updatedRoomType.id] = Math.round(numBaseRate * mult);
+    }
+  });
+
+  // Sync room type name and default rate for vacant rooms
+  roomsData.forEach(room => {
+    if (room.typeId === updatedRoomType.id) {
+      room.typeName = updatedRoomType.name;
+      if (!room.status.startsWith("occupied")) {
+        room.rate = updatedRoomType.baseRate;
+      }
+    }
+  });
+
   const log = {
     id: `log-${Date.now()}`,
     timestamp: new Date().toISOString(),
     staff: "Hotel Administrator",
     action: "Room Type Settings Updated",
-    details: `Saved room type config for '${updatedRoomType.name}' (Base Rate: $${updatedRoomType.baseRate}/night)`
+    details: `Updated room type '${updatedRoomType.name}' (Base Rate: ${updatedRoomType.baseRate}.000 VNĐ). Automatically recalculated all seasonal rate periods.`
   };
   auditLogs.unshift(log);
 
-  broadcastUpdate("SETTINGS_ROOM_TYPES_UPDATED", { roomTypes: roomTypesData, log });
-  res.json({ success: true, roomType: updatedRoomType });
+  broadcastUpdate("SETTINGS_ROOM_TYPES_UPDATED", { roomTypes: roomTypesData, ratePeriods: ratePeriodsData, rooms: roomsData, log });
+  res.json({ success: true, roomType: updatedRoomType, ratePeriods: ratePeriodsData });
 });
 
 // --- SETTINGS: Save/Update Rate Period ---
@@ -464,6 +518,7 @@ app.post("/api/pms/settings/rate-periods/save", (req, res) => {
 
   const periodId = id || `period-${Date.now()}`;
   const existingIdx = ratePeriodsData.findIndex(p => p.id === periodId);
+  const isDefaultPeriod = Boolean(isDefault) || periodId === "period-standard-base";
 
   const updatedPeriod = {
     id: periodId,
@@ -472,7 +527,7 @@ app.post("/api/pms/settings/rate-periods/save", (req, res) => {
     endDate,
     rates: rates || {},
     multiplier: Number(multiplier) || 1.0,
-    isDefault: Boolean(isDefault),
+    isDefault: isDefaultPeriod,
     notes: notes || ""
   };
 
@@ -482,17 +537,57 @@ app.post("/api/pms/settings/rate-periods/save", (req, res) => {
     ratePeriodsData.push(updatedPeriod);
   }
 
+  // If this is the Standard Base period, sync new base rates back to roomTypesData and auto-update other seasonal periods
+  if (isDefaultPeriod) {
+    Object.keys(updatedPeriod.rates).forEach(rtId => {
+      const newRate = Number(updatedPeriod.rates[rtId]);
+      const rt = roomTypesData.find(t => t.id === rtId);
+      if (rt && newRate > 0) {
+        rt.baseRate = newRate;
+      }
+    });
+
+    // Recalculate rates for all other seasonal periods using their multipliers
+    ratePeriodsData.forEach(period => {
+      if (!period.isDefault && period.id !== "period-standard-base") {
+        if (!period.rates) period.rates = {};
+        const mult = period.multiplier || 1.0;
+        roomTypesData.forEach(rt => {
+          period.rates[rt.id] = Math.round(rt.baseRate * mult);
+        });
+      }
+    });
+  } else {
+    // Fill in any missing rates for room categories in this seasonal period using its multiplier
+    roomTypesData.forEach(rt => {
+      if (updatedPeriod.rates[rt.id] === undefined || updatedPeriod.rates[rt.id] === 0) {
+        updatedPeriod.rates[rt.id] = Math.round(rt.baseRate * updatedPeriod.multiplier);
+      }
+    });
+  }
+
+  // Sync vacant room rates if active period matches
+  const activePeriod = ratePeriodsData.find(p => businessDate >= p.startDate && businessDate <= p.endDate && !p.isDefault) ||
+                       ratePeriodsData.find(p => p.isDefault || p.id === "period-standard-base");
+  if (activePeriod && activePeriod.rates) {
+    roomsData.forEach(r => {
+      if (!r.status.startsWith("occupied") && activePeriod.rates[r.typeId] !== undefined) {
+        r.rate = activePeriod.rates[r.typeId];
+      }
+    });
+  }
+
   const log = {
     id: `log-${Date.now()}`,
     timestamp: new Date().toISOString(),
     staff: "Revenue Manager",
     action: "Seasonal Rate Period Saved",
-    details: `Configured rate period '${updatedPeriod.name}' (${updatedPeriod.startDate} to ${updatedPeriod.endDate})`
+    details: `Configured rate period '${updatedPeriod.name}' (${updatedPeriod.startDate} to ${updatedPeriod.endDate}). Seasonal rates auto-synchronized across room categories.`
   };
   auditLogs.unshift(log);
 
-  broadcastUpdate("SETTINGS_RATE_PERIODS_UPDATED", { ratePeriods: ratePeriodsData, log });
-  res.json({ success: true, ratePeriod: updatedPeriod });
+  broadcastUpdate("SETTINGS_RATE_PERIODS_UPDATED", { ratePeriods: ratePeriodsData, roomTypes: roomTypesData, rooms: roomsData, log });
+  res.json({ success: true, ratePeriod: updatedPeriod, roomTypes: roomTypesData, ratePeriods: ratePeriodsData });
 });
 
 // --- SETTINGS: Delete Rate Period ---
@@ -541,6 +636,87 @@ app.post("/api/pms/settings/apply-period-rates", (req, res) => {
 
   broadcastUpdate("RATE_PERIOD_APPLIED", { period, rooms: roomsData, log });
   res.json({ success: true, updatedCount, period });
+});
+
+// --- SETTINGS: Save / Edit Service Rate ---
+app.post("/api/pms/settings/service-rates/save", (req, res) => {
+  const { id, category, name, unit, rate, description, isAvailable } = req.body;
+  if (!name || rate === undefined || rate < 0) {
+    return res.status(400).json({ error: "Service name and valid positive rate required" });
+  }
+
+  const serviceId = id || `srv-${Date.now()}`;
+  const existingIdx = serviceRatesData.findIndex(s => s.id === serviceId);
+
+  const updatedService = {
+    id: serviceId,
+    category: category || "other",
+    name,
+    unit: unit || "lần",
+    rate: Number(rate),
+    description: description || "",
+    isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : true
+  };
+
+  if (existingIdx >= 0) {
+    serviceRatesData[existingIdx] = updatedService;
+  } else {
+    serviceRatesData.push(updatedService);
+  }
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Revenue Manager",
+    action: "Service Tariff Saved",
+    details: `Updated service tariff '${updatedService.name}' (${updatedService.category.toUpperCase()}: ${updatedService.rate}.000 VNĐ / ${updatedService.unit})`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("SETTINGS_SERVICE_RATES_UPDATED", { serviceRates: serviceRatesData, log });
+  res.json({ success: true, serviceRate: updatedService });
+});
+
+// --- SETTINGS: Delete Service Rate ---
+app.post("/api/pms/settings/service-rates/delete", (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "Service ID required" });
+
+  const item = serviceRatesData.find(s => s.id === id);
+  serviceRatesData = serviceRatesData.filter(s => s.id !== id);
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Revenue Manager",
+    action: "Service Tariff Deleted",
+    details: `Deleted service tariff '${item?.name || id}'`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("SETTINGS_SERVICE_RATES_UPDATED", { serviceRates: serviceRatesData, log });
+  res.json({ success: true });
+});
+
+// --- SETTINGS: Toggle Service Availability ---
+app.post("/api/pms/settings/service-rates/toggle", (req, res) => {
+  const { id } = req.body;
+  const item = serviceRatesData.find(s => s.id === id);
+  if (!item) return res.status(404).json({ error: "Service not found" });
+
+  item.isAvailable = !item.isAvailable;
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Revenue Manager",
+    action: "Service Availability Toggled",
+    details: `Toggled availability for '${item.name}' to ${item.isAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("SETTINGS_SERVICE_RATES_UPDATED", { serviceRates: serviceRatesData, log });
+  res.json({ success: true, serviceRate: item });
 });
 
 // --- Submit / Transfer Report to Department ---
@@ -605,6 +781,7 @@ app.post("/api/pms/checkin", (req, res) => {
     guestNationality,
     guestAddress,
     visaExpiryDate,
+    guests, // Array of up to 3 guest profiles
     checkInTime,
     checkOutTime,
     notes,
@@ -631,20 +808,39 @@ app.post("/api/pms/checkin", (req, res) => {
   const tax = totalRate * 0.05;
   const grandTotal = totalRate + tax;
 
+  // Process guests list (up to 3 guests)
+  const guestsList = Array.isArray(guests) && guests.length > 0 
+    ? guests.slice(0, 3) 
+    : [{
+        fullName: guestName || "Walk-In Guest",
+        dob: guestDob || "",
+        gender: guestGender || "Nam",
+        idNumber: guestIdNumber || "ID-UNSPECIFIED",
+        nationality: guestNationality || "Việt Nam",
+        address: guestAddress || "",
+        visaExpiryDate: visaExpiryDate || "",
+        phone: guestPhone || "",
+        email: guestEmail || "",
+        isPrimary: true
+      }];
+
+  const primaryGuest = guestsList[0];
+
   let existingRes = reservationId ? reservationsData.find(r => r.id === reservationId) : null;
   let targetReservation;
 
   if (existingRes) {
     existingRes.status = "checked_in";
-    if (guestName) existingRes.guestName = guestName;
-    if (guestPhone) existingRes.guestPhone = guestPhone;
-    if (guestEmail) existingRes.guestEmail = guestEmail;
-    if (guestIdNumber) existingRes.guestIdNumber = guestIdNumber;
-    if (guestDob) existingRes.guestDob = guestDob;
-    if (guestGender) existingRes.guestGender = guestGender;
-    if (guestNationality) existingRes.guestNationality = guestNationality;
-    if (guestAddress) existingRes.guestAddress = guestAddress;
-    if (visaExpiryDate) existingRes.visaExpiryDate = visaExpiryDate;
+    existingRes.guestName = primaryGuest.fullName || guestName || existingRes.guestName;
+    existingRes.guestPhone = primaryGuest.phone || guestPhone || existingRes.guestPhone;
+    existingRes.guestEmail = primaryGuest.email || guestEmail || existingRes.guestEmail;
+    existingRes.guestIdNumber = primaryGuest.idNumber || guestIdNumber || existingRes.guestIdNumber;
+    existingRes.guestDob = primaryGuest.dob || guestDob || existingRes.guestDob;
+    existingRes.guestGender = primaryGuest.gender || guestGender || existingRes.guestGender;
+    existingRes.guestNationality = primaryGuest.nationality || guestNationality || existingRes.guestNationality;
+    existingRes.guestAddress = primaryGuest.address || guestAddress || existingRes.guestAddress;
+    existingRes.visaExpiryDate = primaryGuest.visaExpiryDate || visaExpiryDate || existingRes.visaExpiryDate;
+    existingRes.guests = guestsList;
     if (checkInTime) existingRes.checkInTime = checkInTime;
     if (checkOutTime) existingRes.checkOutTime = checkOutTime;
     if (notes) existingRes.notes = notes;
@@ -655,6 +851,7 @@ app.post("/api/pms/checkin", (req, res) => {
     existingRes.keycardAssigned = keycardAssigned || existingRes.keycardAssigned || `KC-${room.number}-A`;
     existingRes.depositAmount = Number(depositAmount) || existingRes.depositAmount || 50;
     existingRes.totalAmount = grandTotal;
+    existingRes.adults = guestsList.length;
     
     // Ensure checkOutDate matches stay length
     const inDate = new Date(existingRes.checkInDate || businessDate);
@@ -669,15 +866,16 @@ app.post("/api/pms/checkin", (req, res) => {
     const newReservation = {
       id: resId,
       confirmationCode: confCode,
-      guestName: guestName || "Walk-In Guest",
-      guestPhone: guestPhone || "",
-      guestEmail: guestEmail || "",
-      guestIdNumber: guestIdNumber || "ID-UNSPECIFIED",
-      guestDob: guestDob || "",
-      guestGender: guestGender || "Nam",
-      guestNationality: guestNationality || "Việt Nam",
-      guestAddress: guestAddress || "",
-      visaExpiryDate: visaExpiryDate || "",
+      guestName: primaryGuest.fullName || guestName || "Walk-In Guest",
+      guestPhone: primaryGuest.phone || guestPhone || "",
+      guestEmail: primaryGuest.email || guestEmail || "",
+      guestIdNumber: primaryGuest.idNumber || guestIdNumber || "ID-UNSPECIFIED",
+      guestDob: primaryGuest.dob || guestDob || "",
+      guestGender: primaryGuest.gender || guestGender || "Nam",
+      guestNationality: primaryGuest.nationality || guestNationality || "Việt Nam",
+      guestAddress: primaryGuest.address || guestAddress || "",
+      visaExpiryDate: primaryGuest.visaExpiryDate || visaExpiryDate || "",
+      guests: guestsList,
       checkInTime: checkInTime || `${businessDate} 14:00`,
       checkOutTime: checkOutTime || `${new Date(Date.now() + numNights * 86400000).toISOString().split('T')[0]} 12:00`,
       notes: notes || "",
@@ -690,7 +888,7 @@ app.post("/api/pms/checkin", (req, res) => {
       totalAmount: grandTotal,
       paidAmount: Number(depositAmount) || grandTotal,
       channel: channel || "Walk-In",
-      adults: Number(adults) || 1,
+      adults: guestsList.length,
       children: 0,
       keycardAssigned: keycardAssigned || `KC-${room.number}-A`,
       depositAmount: Number(depositAmount) || 50,
@@ -1066,6 +1264,108 @@ app.post("/api/pms/reservation/create", (req, res) => {
   broadcastUpdate("RESERVATION_CREATED", { reservation: newRes, log });
 
   res.json({ success: true, reservation: newRes });
+});
+
+// --- Update Reservation ---
+app.post("/api/pms/reservation/update", (req, res) => {
+  const {
+    id,
+    guestName,
+    guestPhone,
+    guestEmail,
+    roomTypeId,
+    checkInDate,
+    checkOutDate,
+    status,
+    channel,
+    adults,
+    roomNumber,
+    notes
+  } = req.body;
+
+  const resv = reservationsData.find((r) => r.id === id);
+  if (!resv) {
+    return res.status(404).json({ error: "Reservation not found" });
+  }
+
+  if (guestName !== undefined) resv.guestName = guestName;
+  if (guestPhone !== undefined) resv.guestPhone = guestPhone;
+  if (guestEmail !== undefined) resv.guestEmail = guestEmail;
+  if (checkInDate !== undefined) resv.checkInDate = checkInDate;
+  if (checkOutDate !== undefined) resv.checkOutDate = checkOutDate;
+  if (status !== undefined) resv.status = status;
+  if (channel !== undefined) resv.channel = channel;
+  if (adults !== undefined) resv.adults = Number(adults) || 1;
+  if (notes !== undefined) resv.notes = notes;
+
+  if (roomTypeId) {
+    const type = roomTypesData.find((t) => t.id === roomTypeId);
+    if (type) {
+      resv.roomTypeName = type.name;
+      const room = roomsData.find((r) => r.typeId === type.id && r.status !== "out_of_order") || roomsData[0];
+      if (room && (!roomNumber || roomNumber === resv.roomNumber)) {
+        resv.roomId = room.id;
+        resv.roomNumber = room.number;
+      }
+    }
+  }
+
+  if (roomNumber !== undefined) {
+    const room = roomsData.find((r) => r.number === roomNumber);
+    if (room) {
+      resv.roomId = room.id;
+      resv.roomNumber = room.number;
+    }
+  }
+
+  // Recalculate total if dates changed
+  if (checkInDate && checkOutDate) {
+    const days = Math.max(1, Math.round((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / 86400000));
+    const type = roomTypesData.find((t) => t.name === resv.roomTypeName) || roomTypesData[0];
+    const rate = type.baseRate * days;
+    const tax = rate * 0.05;
+    resv.totalAmount = rate + tax;
+  }
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Reservations Agent",
+    action: "Booking Updated",
+    details: `Updated reservation ${resv.confirmationCode} for ${resv.guestName}`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("RESERVATION_UPDATED", { reservation: resv, log });
+
+  res.json({ success: true, reservation: resv });
+});
+
+// --- Delete Reservation ---
+app.post("/api/pms/reservation/delete", (req, res) => {
+  const { id } = req.body;
+  const resv = reservationsData.find((r) => r.id === id);
+  if (!resv) {
+    return res.status(404).json({ error: "Reservation not found" });
+  }
+
+  const deletedCode = resv.confirmationCode;
+  const deletedGuest = resv.guestName;
+
+  reservationsData = reservationsData.filter((r) => r.id !== id);
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Reservations Agent",
+    action: "Booking Deleted",
+    details: `Deleted reservation ${deletedCode} (${deletedGuest})`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("RESERVATION_DELETED", { id, log });
+
+  res.json({ success: true, id });
 });
 
 // --- Night Audit Runner ---

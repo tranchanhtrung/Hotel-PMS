@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { usePms } from "../../context/PmsContext";
-import { UserCheck, Shield, KeyRound, CreditCard, Hotel, DollarSign, Calendar, Globe, MapPin, Clock, FileText } from "lucide-react";
+import { UserCheck, Shield, KeyRound, CreditCard, Hotel, DollarSign, Calendar, Globe, MapPin, Clock, FileText, UserPlus, Trash2, Users } from "lucide-react";
+import { GuestProfile } from "../../types";
+import { formatVND } from "../../utils/formatters";
 
 export const CheckInModal: React.FC = () => {
   const {
@@ -15,38 +17,78 @@ export const CheckInModal: React.FC = () => {
     businessDate
   } = usePms();
 
-  // 1. Họ và tên khách
-  const [guestName, setGuestName] = useState("");
-  // 2. Ngày tháng năm sinh
-  const [guestDob, setGuestDob] = useState("1995-05-20");
-  // 3. Nam/ Nữ
-  const [guestGender, setGuestGender] = useState<"Nam" | "Nữ" | "Khác">("Nam");
-  // 4. Số CMND/ CCCD hoặc Hộ chiếu
-  const [guestIdNumber, setGuestIdNumber] = useState("");
-  // 5. Quốc tịch
-  const [guestNationality, setGuestNationality] = useState("Việt Nam");
-  // 6. Nơi thường trú/ Tạm trú
-  const [guestAddress, setGuestAddress] = useState("");
+  // Multi-guest list state (up to 3 guests)
+  const defaultPrimaryGuest: GuestProfile = {
+    fullName: "",
+    dob: "1995-05-20",
+    gender: "Nam",
+    idNumber: "",
+    nationality: "Việt Nam",
+    address: "",
+    visaExpiryDate: "",
+    phone: "",
+    email: "",
+    isPrimary: true
+  };
+
+  const [guestList, setGuestList] = useState<GuestProfile[]>([defaultPrimaryGuest]);
+  const [activeGuestIdx, setActiveGuestIdx] = useState<number>(0);
+
   // 7. Số phòng (roomId)
   const [roomId, setRoomId] = useState("");
   // 8. Thời gian lưu trú (Giờ, ngày đến)
   const [checkInTime, setCheckInTime] = useState(`${businessDate}T14:00`);
   // 9. Thời gian lưu trú (Giờ, ngày đi)
   const [checkOutTime, setCheckOutTime] = useState("");
-  // 10. Ngày hết hạn visa
-  const [visaExpiryDate, setVisaExpiryDate] = useState("");
   // 11. Ghi chú
   const [notes, setNotes] = useState("");
 
   // Ancillary fields
-  const [guestPhone, setGuestPhone] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
   const [nights, setNights] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Credit Card" | "Bank Transfer">("Credit Card");
   const [depositAmount, setDepositAmount] = useState(50);
   const [keycardAssigned, setKeycardAssigned] = useState("");
   const [channel, setChannel] = useState("Walk-In");
   const [submitting, setSubmitting] = useState(false);
+
+  // Active guest helper
+  const activeGuest = guestList[activeGuestIdx] || guestList[0] || defaultPrimaryGuest;
+
+  const updateActiveGuest = (field: keyof GuestProfile, value: any) => {
+    setGuestList((prev) => {
+      const next = [...prev];
+      if (next[activeGuestIdx]) {
+        next[activeGuestIdx] = { ...next[activeGuestIdx], [field]: value };
+      }
+      return next;
+    });
+  };
+
+  const handleAddGuest = () => {
+    if (guestList.length >= 3) return;
+    const newGuest: GuestProfile = {
+      fullName: "",
+      dob: "2000-01-01",
+      gender: "Nam",
+      idNumber: "",
+      nationality: activeGuest.nationality || "Việt Nam",
+      address: activeGuest.address || "",
+      visaExpiryDate: "",
+      phone: "",
+      email: "",
+      isPrimary: false
+    };
+    setGuestList((prev) => [...prev, newGuest]);
+    setActiveGuestIdx(guestList.length);
+  };
+
+  const handleRemoveGuest = (index: number) => {
+    if (guestList.length <= 1) return;
+    setGuestList((prev) => prev.filter((_, i) => i !== index));
+    if (activeGuestIdx >= index && activeGuestIdx > 0) {
+      setActiveGuestIdx(activeGuestIdx - 1);
+    }
+  };
 
   // Calculate default checkOutTime based on businessDate and nights
   useEffect(() => {
@@ -74,19 +116,28 @@ export const CheckInModal: React.FC = () => {
 
   useEffect(() => {
     if (selectedReservationForCheckIn) {
-      setGuestName(selectedReservationForCheckIn.guestName || "");
-      setGuestPhone(selectedReservationForCheckIn.guestPhone || "");
-      setGuestEmail(selectedReservationForCheckIn.guestEmail || "");
-      setGuestIdNumber(
-        selectedReservationForCheckIn.guestIdNumber && selectedReservationForCheckIn.guestIdNumber !== "PENDING"
-          ? selectedReservationForCheckIn.guestIdNumber
-          : "012345678901"
-      );
-      setGuestDob(selectedReservationForCheckIn.guestDob || "1992-08-15");
-      setGuestGender((selectedReservationForCheckIn.guestGender as any) || "Nam");
-      setGuestNationality(selectedReservationForCheckIn.guestNationality || "Việt Nam");
-      setGuestAddress(selectedReservationForCheckIn.guestAddress || "123 Đường Lê Lợi, Q.1, TP. Hồ Chí Minh");
-      setVisaExpiryDate(selectedReservationForCheckIn.visaExpiryDate || "");
+      if (selectedReservationForCheckIn.guests && selectedReservationForCheckIn.guests.length > 0) {
+        setGuestList(selectedReservationForCheckIn.guests);
+      } else {
+        setGuestList([
+          {
+            fullName: selectedReservationForCheckIn.guestName || "",
+            dob: selectedReservationForCheckIn.guestDob || "1992-08-15",
+            gender: (selectedReservationForCheckIn.guestGender as any) || "Nam",
+            idNumber:
+              selectedReservationForCheckIn.guestIdNumber && selectedReservationForCheckIn.guestIdNumber !== "PENDING"
+                ? selectedReservationForCheckIn.guestIdNumber
+                : "012345678901",
+            nationality: selectedReservationForCheckIn.guestNationality || "Việt Nam",
+            address: selectedReservationForCheckIn.guestAddress || "123 Đường Lê Lợi, Q.1, TP. Hồ Chí Minh",
+            visaExpiryDate: selectedReservationForCheckIn.visaExpiryDate || "",
+            phone: selectedReservationForCheckIn.guestPhone || "",
+            email: selectedReservationForCheckIn.guestEmail || "",
+            isPrimary: true
+          }
+        ]);
+      }
+      setActiveGuestIdx(0);
       setNotes(selectedReservationForCheckIn.notes || "");
 
       const inDate = selectedReservationForCheckIn.checkInDate || businessDate;
@@ -106,15 +157,21 @@ export const CheckInModal: React.FC = () => {
         selectedReservationForCheckIn.keycardAssigned || `KC-${selectedReservationForCheckIn.roomNumber}-A`
       );
     } else {
-      setGuestName("");
-      setGuestPhone("");
-      setGuestEmail("");
-      setGuestIdNumber("");
-      setGuestDob("1995-05-20");
-      setGuestGender("Nam");
-      setGuestNationality("Việt Nam");
-      setGuestAddress("");
-      setVisaExpiryDate("");
+      setGuestList([
+        {
+          fullName: "",
+          dob: "1995-05-20",
+          gender: "Nam",
+          idNumber: "",
+          nationality: "Việt Nam",
+          address: "",
+          visaExpiryDate: "",
+          phone: "",
+          email: "",
+          isPrimary: true
+        }
+      ]);
+      setActiveGuestIdx(0);
       setNotes("");
 
       setCheckInTime(`${businessDate}T14:00`);
@@ -143,21 +200,23 @@ export const CheckInModal: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestName.trim()) return;
+    const primaryG = guestList[0];
+    if (!primaryG || !primaryG.fullName.trim()) return;
     if (!roomId) return;
 
     setSubmitting(true);
     const success = await checkIn({
       reservationId: selectedReservationForCheckIn?.id,
-      guestName,
-      guestPhone,
-      guestEmail,
-      guestIdNumber,
-      guestDob,
-      guestGender,
-      guestNationality,
-      guestAddress,
-      visaExpiryDate,
+      guestName: primaryG.fullName,
+      guestPhone: primaryG.phone || "",
+      guestEmail: primaryG.email || "",
+      guestIdNumber: primaryG.idNumber || "",
+      guestDob: primaryG.dob || "",
+      guestGender: primaryG.gender || "Nam",
+      guestNationality: primaryG.nationality || "Việt Nam",
+      guestAddress: primaryG.address || "",
+      visaExpiryDate: primaryG.visaExpiryDate || "",
+      guests: guestList,
       checkInTime,
       checkOutTime,
       notes,
@@ -166,6 +225,7 @@ export const CheckInModal: React.FC = () => {
       paymentMethod,
       depositAmount,
       channel,
+      adults: guestList.length,
       keycardAssigned
     });
     setSubmitting(false);
@@ -204,26 +264,74 @@ export const CheckInModal: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          {/* SECTION 1: THÔNG TIN CÁ NHÂN & ĐĂNG KÝ LƯU TRÚ (Guest Identity) */}
+          {/* SECTION 1: THÔNG TIN CÁ NHÂN & ĐĂNG KÝ LƯU TRÚ (Guest Identity - Up to 3 guests) */}
           <div className="space-y-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-            <div className="flex justify-between items-center border-b border-slate-800/80 pb-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800/80 pb-2 gap-2">
               <span className="font-bold text-amber-400 text-xs flex items-center gap-1.5 uppercase tracking-wider">
-                <UserCheck className="w-4 h-4" />
+                <Users className="w-4 h-4" />
                 {t("sec1Title")}
               </span>
-              <span className="text-[10px] text-slate-400">{t("sec1Subtitle")}</span>
+              <span className="text-[10px] text-amber-300/80 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                {t("sec1Subtitle")} ({guestList.length}/3)
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Guest Selector Tabs */}
+            <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 pt-1 border-b border-slate-800/50">
+              <div className="flex items-center gap-1.5">
+                {guestList.map((g, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveGuestIdx(idx)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                      activeGuestIdx === idx
+                        ? "bg-amber-500 text-slate-950 font-bold shadow-md"
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    }`}
+                  >
+                    <span>{idx === 0 ? `👤 ${t("guestTabLabel")} 1 (${t("primaryGuestTag")})` : `👤 ${t("guestTabLabel")} ${idx + 1}`}</span>
+                    {g.fullName ? <span className="max-w-[70px] truncate text-[10px] opacity-80">({g.fullName})</span> : null}
+                  </button>
+                ))}
+
+                {guestList.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={handleAddGuest}
+                    className="flex items-center gap-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-xs transition font-semibold"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>{t("addGuestBtn")}</span>
+                  </button>
+                )}
+              </div>
+
+              {guestList.length > 1 && activeGuestIdx > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveGuest(activeGuestIdx)}
+                  className="flex items-center gap-1 text-rose-400 hover:text-rose-300 text-[11px] bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-2 py-1 rounded transition"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>{t("removeGuestBtn")}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Active Guest Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
               {/* 1. Họ và tên khách */}
               <div className="md:col-span-2">
-                <label className="text-slate-300 block mb-1 font-medium">{t("field1Name")}</label>
+                <label className="text-slate-300 block mb-1 font-medium">
+                  {t("field1Name")} {activeGuestIdx === 0 ? `(${t("primaryGuestTag")})` : `(${t("guestTabLabel")} ${activeGuestIdx + 1})`}
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="Ví dụ: NGUYỄN VĂN A"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
+                  value={activeGuest.fullName || ""}
+                  onChange={(e) => updateActiveGuest("fullName", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 uppercase font-semibold focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -232,8 +340,8 @@ export const CheckInModal: React.FC = () => {
               <div>
                 <label className="text-slate-300 block mb-1 font-medium">{t("field3Gender")}</label>
                 <select
-                  value={guestGender}
-                  onChange={(e) => setGuestGender(e.target.value as any)}
+                  value={activeGuest.gender || "Nam"}
+                  onChange={(e) => updateActiveGuest("gender", e.target.value as any)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-medium focus:outline-none focus:border-amber-500"
                 >
                   <option value="Nam">{t("genderMale")}</option>
@@ -248,8 +356,8 @@ export const CheckInModal: React.FC = () => {
                 <input
                   type="date"
                   required
-                  value={guestDob}
-                  onChange={(e) => setGuestDob(e.target.value)}
+                  value={activeGuest.dob || ""}
+                  onChange={(e) => updateActiveGuest("dob", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -261,8 +369,8 @@ export const CheckInModal: React.FC = () => {
                   type="text"
                   required
                   placeholder="e.g. 012345678901 hoặc B1234567"
-                  value={guestIdNumber}
-                  onChange={(e) => setGuestIdNumber(e.target.value)}
+                  value={activeGuest.idNumber || ""}
+                  onChange={(e) => updateActiveGuest("idNumber", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -277,8 +385,8 @@ export const CheckInModal: React.FC = () => {
                   type="text"
                   required
                   placeholder="e.g. Việt Nam, Hàn Quốc, Mỹ..."
-                  value={guestNationality}
-                  onChange={(e) => setGuestNationality(e.target.value)}
+                  value={activeGuest.nationality || ""}
+                  onChange={(e) => updateActiveGuest("nationality", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -293,8 +401,8 @@ export const CheckInModal: React.FC = () => {
                   type="text"
                   required
                   placeholder="Số nhà, Đường, Phường/Xã, Quận/Huyện, Tỉnh/TP"
-                  value={guestAddress}
-                  onChange={(e) => setGuestAddress(e.target.value)}
+                  value={activeGuest.address || ""}
+                  onChange={(e) => updateActiveGuest("address", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -304,8 +412,8 @@ export const CheckInModal: React.FC = () => {
                 <label className="text-slate-300 block mb-1 font-medium">{t("field10VisaExpiry")}</label>
                 <input
                   type="date"
-                  value={visaExpiryDate}
-                  onChange={(e) => setVisaExpiryDate(e.target.value)}
+                  value={activeGuest.visaExpiryDate || ""}
+                  onChange={(e) => updateActiveGuest("visaExpiryDate", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -316,8 +424,8 @@ export const CheckInModal: React.FC = () => {
                 <input
                   type="text"
                   placeholder="+84 901234567"
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
+                  value={activeGuest.phone || ""}
+                  onChange={(e) => updateActiveGuest("phone", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-slate-100 focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -328,8 +436,8 @@ export const CheckInModal: React.FC = () => {
                 <input
                   type="email"
                   placeholder="khachhang@example.com"
-                  value={guestEmail}
-                  onChange={(e) => setGuestEmail(e.target.value)}
+                  value={activeGuest.email || ""}
+                  onChange={(e) => updateActiveGuest("email", e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-slate-100 focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -360,7 +468,7 @@ export const CheckInModal: React.FC = () => {
                 >
                   {roomOptions.map((r) => (
                     <option key={r.id} value={r.id}>
-                      Phòng #{r.number} - {r.typeName} (${r.rate}/đêm) {r.status === "vacant_dirty" ? `[${t("vacantDirty")}]` : ""}
+                      Phòng #{r.number} - {r.typeName} ({formatVND(r.rate)}/đêm) {r.status === "vacant_dirty" ? `[${t("vacantDirty")}]` : ""}
                     </option>
                   ))}
                 </select>
@@ -449,17 +557,17 @@ export const CheckInModal: React.FC = () => {
 
           {/* Folio Billing Summary */}
           <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300">{t("roomRateNights")} ({nights} nights @ ${roomRate}/night)</span>
-              <span className="font-mono font-semibold text-slate-100">${roomTotal.toFixed(2)}</span>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-300">{t("roomRateNights")} ({nights} đêm @ {formatVND(roomRate)}/đêm)</span>
+              <span className="font-mono font-semibold text-slate-100">{formatVND(roomTotal)}</span>
             </div>
-            <div className="flex justify-between items-center text-slate-400">
+            <div className="flex justify-between items-center text-slate-400 text-xs">
               <span>{t("taxCityFee")}</span>
-              <span className="font-mono">${tax.toFixed(2)}</span>
+              <span className="font-mono">{formatVND(tax)}</span>
             </div>
             <div className="border-t border-amber-500/20 pt-2 flex justify-between items-center text-sm font-bold text-amber-300">
               <span>{t("totalAmountToPay")}</span>
-              <span className="font-mono text-base">${grandTotal.toFixed(2)}</span>
+              <span className="font-mono text-base">{formatVND(grandTotal)}</span>
             </div>
           </div>
 
@@ -479,9 +587,10 @@ export const CheckInModal: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-slate-300 block mb-1 font-medium">{t("depositLabel")}</label>
+              <label className="text-slate-300 block mb-1 font-medium">Tạm Ứng / Đặt Cọc (Đơn vị: 1.000 VNĐ)</label>
               <input
                 type="number"
+                placeholder="Ví dụ: 50 = 50.000 VNĐ"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(Number(e.target.value))}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-slate-100 font-mono focus:outline-none focus:border-amber-500 font-bold"

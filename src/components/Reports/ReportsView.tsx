@@ -29,6 +29,7 @@ import {
   Building2
 } from "lucide-react";
 import { ReportSubmission } from "../../types";
+import { formatVND } from "../../utils/formatters";
 
 export const ReportsView: React.FC = () => {
   const {
@@ -250,10 +251,10 @@ export const ReportsView: React.FC = () => {
 
   // Revenue by Room Type Breakdown
   const roomTypeStats = [
-    { name: "Standard Single", rate: 45, total: 24 },
-    { name: "Standard Double", rate: 60, total: 24 },
-    { name: "Deluxe Twin", rate: 75, total: 16 },
-    { name: "Executive Suite", rate: 120, total: 8 }
+    { name: "Standard Single", rate: 450, total: 24 },
+    { name: "Standard Double", rate: 600, total: 24 },
+    { name: "Deluxe Twin", rate: 750, total: 16 },
+    { name: "Executive Suite", rate: 1100, total: 8 }
   ].map((rt) => {
     const typeRooms = rooms.filter((r) => r.typeName === rt.name);
     const occupied = typeRooms.filter((r) => r.status.startsWith("occupied")).length;
@@ -467,7 +468,7 @@ export const ReportsView: React.FC = () => {
                 <span>Gross Revenue</span>
                 <DollarSign className="w-4 h-4 text-emerald-400" />
               </div>
-              <div className="text-2xl font-bold font-mono text-emerald-400">${grossRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold font-mono text-emerald-400">{formatVND(grossRevenue)}</div>
               <span className="text-[10px] text-slate-500">Total room & POS postings</span>
             </div>
 
@@ -476,7 +477,7 @@ export const ReportsView: React.FC = () => {
                 <span>Room Charges</span>
                 <Building className="w-4 h-4 text-amber-400" />
               </div>
-              <div className="text-2xl font-bold font-mono text-amber-300">${totalRoomRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold font-mono text-amber-300">{formatVND(totalRoomRevenue)}</div>
               <span className="text-[10px] text-slate-500">Base room rate tariff</span>
             </div>
 
@@ -485,7 +486,7 @@ export const ReportsView: React.FC = () => {
                 <span>City Occupancy Tax</span>
                 <PieChart className="w-4 h-4 text-sky-400" />
               </div>
-              <div className="text-2xl font-bold font-mono text-sky-300">${totalTaxes.toFixed(2)}</div>
+              <div className="text-2xl font-bold font-mono text-sky-300">{formatVND(totalTaxes)}</div>
               <span className="text-[10px] text-slate-500">5% Municipal room tax</span>
             </div>
 
@@ -494,7 +495,7 @@ export const ReportsView: React.FC = () => {
                 <span>POS & Extras</span>
                 <Sparkles className="w-4 h-4 text-purple-400" />
               </div>
-              <div className="text-2xl font-bold font-mono text-purple-300">${(totalMinibar + totalLaundry + totalExtras).toFixed(2)}</div>
+              <div className="text-2xl font-bold font-mono text-purple-300">{formatVND(totalMinibar + totalLaundry + totalExtras)}</div>
               <span className="text-[10px] text-slate-500">Minibar, Laundry, Add-ons</span>
             </div>
 
@@ -503,7 +504,7 @@ export const ReportsView: React.FC = () => {
                 <span>ADR / RevPAR</span>
                 <TrendingUp className="w-4 h-4 text-amber-500" />
               </div>
-              <div className="text-xl font-bold font-mono text-slate-100">${stats.adr} / ${stats.revpar}</div>
+              <div className="text-base font-bold font-mono text-slate-100">{formatVND(stats.adr)} / {formatVND(stats.revpar)}</div>
               <span className="text-[10px] text-slate-500">Occupancy: {stats.occupancyRate}%</span>
             </div>
           </div>
@@ -530,7 +531,7 @@ export const ReportsView: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono font-bold text-emerald-400 text-sm">${totalCreditCard.toLocaleString()}</div>
+                    <div className="font-mono font-bold text-emerald-400 text-sm">{formatVND(totalCreditCard)}</div>
                     <div className="text-[10px] text-slate-400">Card Processor Batch</div>
                   </div>
                 </div>
@@ -544,7 +545,7 @@ export const ReportsView: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono font-bold text-amber-300 text-sm">${totalCash.toLocaleString()}</div>
+                    <div className="font-mono font-bold text-amber-300 text-sm">{formatVND(totalCash)}</div>
                     <div className="text-[10px] text-slate-400">Cashier Drop</div>
                   </div>
                 </div>
@@ -558,7 +559,7 @@ export const ReportsView: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono font-bold text-sky-300 text-sm">${totalBankTransfer.toLocaleString()}</div>
+                    <div className="font-mono font-bold text-sky-300 text-sm">{formatVND(totalBankTransfer)}</div>
                     <div className="text-[10px] text-slate-400">Escrow / Deposit Hold</div>
                   </div>
                 </div>
@@ -590,7 +591,7 @@ export const ReportsView: React.FC = () => {
                     {roomTypeStats.map((rt) => (
                       <tr key={rt.name} className="hover:bg-slate-800/40">
                         <td className="py-2.5 font-medium text-slate-100">{rt.name}</td>
-                        <td className="py-2.5 font-mono text-amber-300">${rt.rate}/n</td>
+                        <td className="py-2.5 font-mono text-amber-300">{formatVND(rt.rate)}/đêm</td>
                         <td className="py-2.5 font-mono">{rt.occupied} / {rt.total}</td>
                         <td className="py-2.5">
                           <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px]">
@@ -598,7 +599,7 @@ export const ReportsView: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-2.5 text-right font-mono font-bold text-emerald-400">
-                          ${rt.revenue}
+                          {formatVND(rt.revenue)}
                         </td>
                       </tr>
                     ))}
@@ -683,17 +684,17 @@ export const ReportsView: React.FC = () => {
                               <span>{r.itemsCount} posted items</span>
                               <span>•</span>
                               <span className="text-amber-400 font-mono">
-                                Room Charge: ${r.roomRevenue.toFixed(2)}
+                                Giá phòng: {formatVND(r.roomRevenue)}
                               </span>
                               <span>•</span>
                               <span className="text-sky-400 font-mono">
-                                Tax: ${r.taxes.toFixed(2)}
+                                Thuế: {formatVND(r.taxes)}
                               </span>
                               {r.extras > 0 && (
                                 <>
                                   <span>•</span>
                                   <span className="text-purple-400 font-mono">
-                                    Extras: ${r.extras.toFixed(2)}
+                                    Dịch vụ thêm: {formatVND(r.extras)}
                                   </span>
                                 </>
                               )}
@@ -706,14 +707,14 @@ export const ReportsView: React.FC = () => {
                           <div className="text-right">
                             <div className="text-xs text-slate-400 text-[10px]">Total Sales</div>
                             <div className="font-mono font-bold text-emerald-400 text-sm">
-                              ${r.totalSales.toFixed(2)}
+                              {formatVND(r.totalSales)}
                             </div>
                           </div>
 
                           <div className="text-right hidden sm:block">
                             <div className="text-xs text-slate-400 text-[10px]">Settled / Paid</div>
                             <div className="font-mono font-bold text-slate-200 text-xs">
-                              ${r.totalPaid.toFixed(2)}
+                              {formatVND(r.totalPaid)}
                             </div>
                           </div>
 
@@ -724,7 +725,7 @@ export const ReportsView: React.FC = () => {
                                 r.balance > 0 ? "text-amber-400" : "text-emerald-400"
                               }`}
                             >
-                              {r.balance > 0 ? `$${r.balance.toFixed(2)}` : "PAID"}
+                              {r.balance > 0 ? formatVND(r.balance) : "PAID"}
                             </div>
                           </div>
 
@@ -788,7 +789,7 @@ export const ReportsView: React.FC = () => {
                                     </td>
                                     <td className="py-2 font-medium text-slate-200">{item.description}</td>
                                     <td className="py-2 text-right font-mono font-bold text-emerald-400">
-                                      ${item.amount.toFixed(2)}
+                                      {formatVND(item.amount)}
                                     </td>
                                   </tr>
                                 ))}
@@ -817,7 +818,7 @@ export const ReportsView: React.FC = () => {
                                       <span className="text-slate-300 text-[11px]">{pmt.description}</span>
                                     </div>
                                     <div className="font-mono font-bold text-emerald-400">
-                                      -${pmt.amount.toFixed(2)}
+                                      -{formatVND(pmt.amount)}
                                     </div>
                                   </div>
                                 ))}
@@ -828,16 +829,16 @@ export const ReportsView: React.FC = () => {
                           {/* Detail Summary Bar */}
                           <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-wrap justify-between items-center text-xs gap-2">
                             <div className="flex items-center gap-3">
-                              <span className="text-slate-400">Subtotal Room Charge: <strong className="text-slate-100 font-mono">${r.roomRevenue.toFixed(2)}</strong></span>
-                              <span className="text-slate-400">Taxes: <strong className="text-sky-300 font-mono">${r.taxes.toFixed(2)}</strong></span>
+                              <span className="text-slate-400">Subtotal Room Charge: <strong className="text-slate-100 font-mono">{formatVND(r.roomRevenue)}</strong></span>
+                              <span className="text-slate-400">Taxes: <strong className="text-sky-300 font-mono">{formatVND(r.taxes)}</strong></span>
                               {r.extras > 0 && (
-                                <span className="text-slate-400">Extras: <strong className="text-purple-300 font-mono">${r.extras.toFixed(2)}</strong></span>
+                                <span className="text-slate-400">Extras: <strong className="text-purple-300 font-mono">{formatVND(r.extras)}</strong></span>
                               )}
                             </div>
                             <div className="flex items-center gap-3 font-mono">
-                              <span className="text-slate-400">Total: <span className="text-emerald-400 font-bold">${r.totalSales.toFixed(2)}</span></span>
-                              <span className="text-slate-400">Paid: <span className="text-slate-200 font-bold">${r.totalPaid.toFixed(2)}</span></span>
-                              <span className="text-slate-400">Due: <span className={`font-bold ${r.balance > 0 ? "text-amber-400" : "text-emerald-400"}`}>{r.balance > 0 ? `$${r.balance.toFixed(2)}` : "$0.00"}</span></span>
+                              <span className="text-slate-400">Total: <span className="text-emerald-400 font-bold">{formatVND(r.totalSales)}</span></span>
+                              <span className="text-slate-400">Paid: <span className="text-slate-200 font-bold">{formatVND(r.totalPaid)}</span></span>
+                              <span className="text-slate-400">Due: <span className={`font-bold ${r.balance > 0 ? "text-amber-400" : "text-emerald-400"}`}>{r.balance > 0 ? formatVND(r.balance) : "0.000 VNĐ"}</span></span>
                             </div>
                           </div>
                         </div>

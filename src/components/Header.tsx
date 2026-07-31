@@ -1,5 +1,6 @@
 import React from "react";
 import { usePms } from "../context/PmsContext";
+import { formatVND } from "../utils/formatters";
 import {
   Hotel,
   Calendar,
@@ -105,11 +106,11 @@ export const Header: React.FC = () => {
             </div>
             <div className="text-slate-600">|</div>
             <div>
-              ADR: <span className="text-amber-300 font-semibold">${stats.adr}</span>
+              ADR: <span className="text-amber-300 font-semibold">{formatVND(stats.adr)}</span>
             </div>
             <div className="text-slate-600">|</div>
             <div>
-              RevPAR: <span className="text-sky-300 font-semibold">${stats.revpar}</span>
+              RevPAR: <span className="text-sky-300 font-semibold">{formatVND(stats.revpar)}</span>
             </div>
           </div>
 

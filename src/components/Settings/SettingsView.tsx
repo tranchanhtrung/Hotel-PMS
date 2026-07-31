@@ -17,23 +17,138 @@ import {
   Check,
   AlertCircle,
   Sparkles,
-  Layers
+  Layers,
+  Droplets,
+  Shirt,
+  BedDouble,
+  Tag,
+  Search,
+  Power,
+  X
 } from "lucide-react";
-import { RoomType, RatePeriod } from "../../types";
+import { RoomType, RatePeriod, ServiceCategory, ServiceRateItem } from "../../types";
+import { formatVND } from "../../utils/formatters";
 
 export const SettingsView: React.FC = () => {
   const {
     t,
+    language,
     roomTypes,
     ratePeriods,
+    serviceRates,
     businessDate,
     saveRoomType,
     saveRatePeriod,
     deleteRatePeriod,
-    applyRatePeriod
+    applyRatePeriod,
+    saveServiceRate,
+    deleteServiceRate,
+    toggleServiceRate
   } = usePms();
 
-  const [activeSubTab, setActiveSubTab] = useState<"room_types" | "rate_periods" | "rate_matrix">("rate_periods");
+  const [activeSubTab, setActiveSubTab] = useState<"room_types" | "rate_periods" | "rate_matrix" | "service_rates">("service_rates");
+
+  // Helper function for localizing service item properties
+  const formatUnit = (unit: string) => {
+    if (language !== "en") return unit;
+    const u = unit.toLowerCase().trim();
+    if (u === "chai") return "bottle";
+    if (u === "lon") return "can";
+    if (u === "lần") return "time";
+    if (u === "phòng") return "room";
+    if (u === "đêm") return "night";
+    if (u === "cái") return "piece";
+    if (u === "bộ") return "set";
+    if (u === "kg") return "kg";
+    return unit;
+  };
+
+  const getLocalizedServiceName = (name: string) => {
+    if (language !== "en") return name;
+    if (name.includes("Nước suối Aquafina")) return "Aquafina Mineral Water 500ml";
+    if (name.includes("Nước khoáng Perrier")) return "Perrier Sparkling Water 330ml";
+    if (name.includes("Nước ngọt")) return "Soft Drinks (Coca / Pepsi / RedBull)";
+    if (name.includes("Bia Saigon")) return "Saigon Special / Tiger Beer 330ml";
+    if (name.includes("Giặt sấy quần áo thông thường")) return "Standard Laundry & Drying";
+    if (name.includes("Giặt hấp & Ửi sơ mi")) return "Express Dry Cleaning & Shirt Ironing";
+    if (name.includes("Trả phòng muộn 12:00 - 15:00")) return "Late Checkout 12:00 - 15:00 (30% Surcharge)";
+    if (name.includes("Trả phòng muộn 15:00 - 18:00")) return "Late Checkout 15:00 - 18:00 (50% Surcharge)";
+    if (name.includes("Thêm giường phụ")) return "Extra Bed Rollaway";
+    if (name.includes("Phụ thu khách thứ 3")) return "3rd Guest Extra Occupancy Surcharge";
+    return name;
+  };
+
+  const getLocalizedServiceDesc = (desc?: string) => {
+    if (!desc) return "";
+    if (language !== "en") return desc;
+    if (desc.includes("minibar")) return "Chilled room minibar item";
+    if (desc.includes("nhận trước 12:00")) return "Standard folded laundry service (same day)";
+    if (desc.includes("bảo vệ chất liệu")) return "Premium care dry cleaning & ironing";
+    if (desc.includes("phòng nghỉ")) return "Standard late checkout charge";
+    if (desc.includes("nệm cao cấp")) return "Includes extra set of pillows & blankets";
+    if (desc.includes("ăn sáng")) return "Includes complimentary breakfast ticket";
+    return desc;
+  };
+
+  const getLocalizedPeriodName = (name: string) => {
+    if (language !== "en") return name;
+    if (name.includes("Mùa Tiêu Chuẩn")) return "Standard Base Season";
+    if (name.includes("Mùa Cao Điểm Hè")) return "Summer Peak Season";
+    if (name.includes("Cao Điểm Lễ Tết")) return "Festive Holiday Peak";
+    if (name.includes("Khuyến Mãi Mùa Thấp Điểm")) return "Low Season Promotion";
+    return name;
+  };
+
+  const getLocalizedPeriodNotes = (notes?: string) => {
+    if (!notes) return "";
+    if (language !== "en") return notes;
+    if (notes.includes("tiêu chuẩn")) return "Year-round standard default rate tariff";
+    if (notes.includes("du lịch hè")) return "Summer tourism peak surcharge (+35%)";
+    if (notes.includes("Giáng Sinh")) return "Christmas & New Year holiday peak (+60%)";
+    if (notes.includes("thấp điểm")) return "Low season special promotional discount (-15%)";
+    return notes;
+  };
+
+  const getLocalizedRoomTypeName = (name: string) => {
+    if (language !== "en") return name;
+    if (name === "Standard Single") return "Standard Single";
+    if (name === "Standard Double") return "Standard Double";
+    if (name === "Deluxe Twin") return "Deluxe Twin";
+    if (name === "Economy Suite") return "Economy Suite";
+    return name;
+  };
+
+  const getLocalizedRoomTypeDesc = (desc: string) => {
+    if (language !== "en") return desc;
+    if (desc.includes("16m²")) return "Standard single room 16m², single bed, AC, desk, private bathroom";
+    if (desc.includes("22m²")) return "Standard double room 22m², Queen bed, Smart TV, minibar";
+    if (desc.includes("28m²")) return "Deluxe twin room 28m², 2 single beds, city view, coffee maker";
+    if (desc.includes("38m²")) return "Economy Suite 38m², separate living room, King bed, bathtub (Max 3 guests)";
+    return desc;
+  };
+
+  // State for Service Rates Tab
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState<ServiceCategory | "all">("all");
+  const [serviceSearchQuery, setServiceSearchQuery] = useState("");
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<ServiceRateItem | null>(null);
+  const [serviceFormData, setServiceFormData] = useState<{
+    id: string;
+    category: ServiceCategory;
+    name: string;
+    unit: string;
+    rate: number;
+    description: string;
+    isAvailable: boolean;
+  }>({
+    id: "",
+    category: "water",
+    name: "",
+    unit: "chai",
+    rate: 20,
+    description: "",
+    isAvailable: true
+  });
 
   // State for Editing Room Type
   const [editingRoomType, setEditingRoomType] = useState<RoomType | null>(null);
@@ -41,7 +156,7 @@ export const SettingsView: React.FC = () => {
   const [rtFormData, setRtFormData] = useState({
     id: "",
     name: "",
-    baseRate: 50,
+    baseRate: 450,
     maxGuests: 2,
     total: 10,
     description: ""
@@ -119,7 +234,7 @@ export const SettingsView: React.FC = () => {
     setRtFormData({
       id: "",
       name: "",
-      baseRate: 65,
+      baseRate: 600,
       maxGuests: 2,
       total: 12,
       description: "Comfortable hotel room with essential guest amenities"
@@ -213,6 +328,112 @@ export const SettingsView: React.FC = () => {
     }
   };
 
+  // Helper for Category Badges
+  const getCategoryBadge = (cat: ServiceCategory) => {
+    switch (cat) {
+      case "water":
+        return {
+          label: language === "en" ? "Water & Minibar" : "Nước Uống & Minibar",
+          icon: <Droplets className="w-3.5 h-3.5" />,
+          bg: "bg-sky-500/10 text-sky-400 border-sky-500/20"
+        };
+      case "laundry":
+        return {
+          label: language === "en" ? "Laundry & Dry Cleaning" : "Giặt Ủi & Là Sấy",
+          icon: <Shirt className="w-3.5 h-3.5" />,
+          bg: "bg-purple-500/10 text-purple-400 border-purple-500/20"
+        };
+      case "late_checkout":
+        return {
+          label: language === "en" ? "Late Checkout" : "Trả Phòng Muộn",
+          icon: <Clock className="w-3.5 h-3.5" />,
+          bg: "bg-amber-500/10 text-amber-400 border-amber-500/20"
+        };
+      case "extra_bed":
+        return {
+          label: language === "en" ? "Extra Bed & Guests" : "Giường Phụ & Khách Thêm",
+          icon: <BedDouble className="w-3.5 h-3.5" />,
+          bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+        };
+      case "other":
+      default:
+        return {
+          label: language === "en" ? "Other Services" : "Dịch Vụ Khác",
+          icon: <Tag className="w-3.5 h-3.5" />,
+          bg: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+        };
+    }
+  };
+
+  const handleOpenAddService = (category: ServiceCategory = "water") => {
+    setEditingService(null);
+    setServiceFormData({
+      id: "",
+      category,
+      name: "",
+      unit: category === "water" ? "chai" : category === "laundry" ? "kg" : category === "late_checkout" ? "phòng" : category === "extra_bed" ? "đêm" : "lần",
+      rate: 20,
+      description: "",
+      isAvailable: true
+    });
+    setIsServiceModalOpen(true);
+  };
+
+  const handleOpenEditService = (item: ServiceRateItem) => {
+    setEditingService(item);
+    setServiceFormData({
+      id: item.id,
+      category: item.category,
+      name: item.name,
+      unit: item.unit,
+      rate: item.rate,
+      description: item.description || "",
+      isAvailable: item.isAvailable
+    });
+    setIsServiceModalOpen(true);
+  };
+
+  const handleSaveServiceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serviceFormData.name || serviceFormData.rate < 0) {
+      showNotification("Vui lòng nhập Tên Dịch Vụ và Đơn Giá hợp lệ.", "error");
+      return;
+    }
+    const success = await saveServiceRate(serviceFormData);
+    if (success) {
+      showNotification(`Đã lưu bảng giá dịch vụ '${serviceFormData.name}' thành công!`);
+      setIsServiceModalOpen(false);
+    } else {
+      showNotification("Lỗi khi lưu bảng giá dịch vụ.", "error");
+    }
+  };
+
+  const handleDeleteService = async (item: ServiceRateItem) => {
+    if (confirm(`Bạn có chắc chắn muốn xóa dịch vụ '${item.name}'?`)) {
+      const success = await deleteServiceRate(item.id);
+      if (success) {
+        showNotification(`Đã xóa dịch vụ '${item.name}'.`);
+      } else {
+        showNotification("Lỗi khi xóa dịch vụ.", "error");
+      }
+    }
+  };
+
+  const handleToggleService = async (item: ServiceRateItem) => {
+    const success = await toggleServiceRate(item.id);
+    if (success) {
+      showNotification(`Đã cập nhật trạng thái dịch vụ '${item.name}'.`);
+    }
+  };
+
+  // Filtered Services List
+  const filteredServices = serviceRates.filter(item => {
+    const matchesCategory = serviceCategoryFilter === "all" || item.category === serviceCategoryFilter;
+    const matchesQuery = item.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+                         (item.description && item.description.toLowerCase().includes(serviceSearchQuery.toLowerCase()));
+    return matchesCategory && matchesQuery;
+  });
+
   return (
     <div className="space-y-6 pb-12">
       {/* Toast Notification */}
@@ -271,7 +492,19 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Sub-Navigation Tabs */}
-      <div className="flex border-b border-slate-800 gap-2">
+      <div className="flex border-b border-slate-800 gap-2 flex-wrap">
+        <button
+          onClick={() => setActiveSubTab("service_rates")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition ${
+            activeSubTab === "service_rates"
+              ? "border-amber-500 text-amber-400 bg-slate-900/60 rounded-t-xl"
+              : "border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Droplets className="w-4 h-4 text-sky-400" />
+          <span>{t("subTabServiceRates")} ({serviceRates.length})</span>
+        </button>
+
         <button
           onClick={() => setActiveSubTab("rate_periods")}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition ${
@@ -308,6 +541,209 @@ export const SettingsView: React.FC = () => {
           <span>Period Rate Comparison Matrix</span>
         </button>
       </div>
+
+      {/* --- TAB: SERVICE & EXTRA FEE RATES --- */}
+      {activeSubTab === "service_rates" && (
+        <div className="space-y-5">
+          {/* Top Action & Category Filters */}
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-4 shadow-lg">
+            <div className="flex flex-wrap justify-between items-center gap-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  <Droplets className="w-5 h-5 text-sky-400" />
+                  {language === "en" ? "Hotel Service & Surcharge Rate Configuration" : "Cấu Hình Bảng Giá Dịch Vụ & Phụ Thu Dịch Vụ Khách Sạn"}
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  {language === "en" ? "Set tariffs for Minibar Water, Laundry, Late Checkout, Extra Bed, and Other services. Auto-synced with Front Desk & Folio billing." : "Thiết lập đơn giá cho các dịch vụ Nước uống / Minibar, Giặt ủi, Trả phòng muộn, Giường phụ và Dịch vụ khác. Tự động đồng bộ với Quầy lễ tân & Folio thanh toán."}
+                </p>
+              </div>
+
+              <button
+                onClick={() => handleOpenAddService(serviceCategoryFilter === "all" ? "water" : serviceCategoryFilter)}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-amber-500/10"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{language === "en" ? "+ Add New Service" : "+ Thêm Dịch Vụ Mới"}</span>
+              </button>
+            </div>
+
+            {/* Category Filter Tabs & Search */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <button
+                  onClick={() => setServiceCategoryFilter("all")}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    serviceCategoryFilter === "all"
+                      ? "bg-amber-500 text-slate-950 font-bold"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>{language === "en" ? "All" : "Tất Cả"} ({serviceRates.length})</span>
+                </button>
+
+                <button
+                  onClick={() => setServiceCategoryFilter("water")}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    serviceCategoryFilter === "water"
+                      ? "bg-sky-500 text-slate-950 font-bold"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  <Droplets className="w-3.5 h-3.5 text-sky-400" />
+                  <span>{language === "en" ? "Water & Minibar" : "Nước Uống & Minibar"} ({serviceRates.filter(s => s.category === "water").length})</span>
+                </button>
+
+                <button
+                  onClick={() => setServiceCategoryFilter("laundry")}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    serviceCategoryFilter === "laundry"
+                      ? "bg-purple-500 text-slate-950 font-bold"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  <Shirt className="w-3.5 h-3.5 text-purple-400" />
+                  <span>{language === "en" ? "Laundry" : "Giặt Ủi"} ({serviceRates.filter(s => s.category === "laundry").length})</span>
+                </button>
+
+                <button
+                  onClick={() => setServiceCategoryFilter("late_checkout")}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    serviceCategoryFilter === "late_checkout"
+                      ? "bg-amber-500 text-slate-950 font-bold"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{language === "en" ? "Late Checkout" : "Trả Phòng Muộn"} ({serviceRates.filter(s => s.category === "late_checkout").length})</span>
+                </button>
+
+                <button
+                  onClick={() => setServiceCategoryFilter("extra_bed")}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    serviceCategoryFilter === "extra_bed"
+                      ? "bg-emerald-500 text-slate-950 font-bold"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  <BedDouble className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{language === "en" ? "Extra Bed" : "Giường Phụ"} ({serviceRates.filter(s => s.category === "extra_bed").length})</span>
+                </button>
+
+                <button
+                  onClick={() => setServiceCategoryFilter("other")}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                    serviceCategoryFilter === "other"
+                      ? "bg-indigo-500 text-slate-950 font-bold"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  <Tag className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>{language === "en" ? "Other" : "Khác"} ({serviceRates.filter(s => s.category === "other").length})</span>
+                </button>
+              </div>
+
+              {/* Search input */}
+              <div className="relative min-w-[220px]">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={language === "en" ? "Search services..." : "Tìm kiếm dịch vụ..."}
+                  value={serviceSearchQuery}
+                  onChange={(e) => setServiceSearchQuery(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Service Items Grid */}
+          {filteredServices.length === 0 ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400">
+              <Tag className="w-10 h-10 mx-auto text-slate-600 mb-2" />
+              <p className="text-sm font-semibold">{language === "en" ? "No services match the current filter." : "Chưa có dịch vụ nào phù hợp với bộ lọc hiện tại."}</p>
+              <button
+                onClick={() => handleOpenAddService(serviceCategoryFilter === "all" ? "water" : serviceCategoryFilter)}
+                className="mt-3 text-xs bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 px-3 py-1.5 rounded-xl font-medium inline-flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> {language === "en" ? "Create New Service" : "Tạo Dịch Vụ Mới"}
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredServices.map((item) => {
+                const badge = getCategoryBadge(item.category);
+                return (
+                  <div
+                    key={item.id}
+                    className={`bg-slate-900 border rounded-2xl p-4 space-y-3 relative flex flex-col justify-between transition hover:border-slate-700 shadow-lg ${
+                      item.isAvailable ? "border-slate-800" : "border-slate-800/60 opacity-60 bg-slate-900/50"
+                    }`}
+                  >
+                    <div>
+                      {/* Top Category Badge & Status */}
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${badge.bg}`}>
+                          {badge.icon}
+                          <span>{badge.label}</span>
+                        </span>
+
+                        <button
+                          onClick={() => handleToggleService(item)}
+                          title={language === "en" ? "Toggle availability" : "Bật/Tắt khả năng cung cấp"}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border font-mono font-bold flex items-center gap-1 transition ${
+                            item.isAvailable
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                              : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700"
+                          }`}
+                        >
+                          <Power className="w-3 h-3" />
+                          <span>{item.isAvailable ? (language === "en" ? "Available" : "Đang Bán") : (language === "en" ? "Unavailable" : "Tạm Ngưng")}</span>
+                        </button>
+                      </div>
+
+                      {/* Service Name & Description */}
+                      <h3 className="font-bold text-slate-100 text-sm">{getLocalizedServiceName(item.name)}</h3>
+                      {item.description && (
+                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{getLocalizedServiceDesc(item.description)}</p>
+                      )}
+                    </div>
+
+                    {/* Price & Actions */}
+                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">{language === "en" ? "Rate" : "Đơn giá"}</span>
+                        <div className="text-amber-400 font-mono font-extrabold text-base">
+                          {formatVND(item.rate)}
+                          <span className="text-slate-400 font-normal text-xs ml-1">/ {formatUnit(item.unit)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEditService(item)}
+                          className="p-2 text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded-xl transition"
+                          title={language === "en" ? "Edit service" : "Chỉnh sửa dịch vụ"}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteService(item)}
+                          className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition"
+                          title={language === "en" ? "Delete service" : "Xóa dịch vụ"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* --- TAB 1: MULTI-PERIOD SEASONAL RATES --- */}
       {activeSubTab === "rate_periods" && (
@@ -349,16 +785,16 @@ export const SettingsView: React.FC = () => {
                   <div className="flex justify-between items-start gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-slate-100 text-sm">{period.name}</h3>
+                        <h3 className="font-bold text-slate-100 text-sm">{getLocalizedPeriodName(period.name)}</h3>
                         {activeNow && (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1">
                             <Check className="w-3 h-3" />
-                            Active for Today
+                            {language === "en" ? "Active for Today" : "Đang Áp Dụng Hôm Nay"}
                           </span>
                         )}
                         {period.isDefault && (
                           <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-[10px]">
-                            Base Default
+                            {language === "en" ? "Base Default" : "Mặc Định Trực Tiếp"}
                           </span>
                         )}
                       </div>
@@ -366,7 +802,7 @@ export const SettingsView: React.FC = () => {
                       <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
                         <CalendarDays className="w-3.5 h-3.5 text-amber-400" />
                         <span className="font-mono text-slate-200">{period.startDate}</span>
-                        <span>to</span>
+                        <span>{language === "en" ? "to" : "đến"}</span>
                         <span className="font-mono text-slate-200">{period.endDate}</span>
                       </div>
                     </div>
@@ -374,7 +810,7 @@ export const SettingsView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => openEditPeriod(period)}
-                        title="Edit Period Rules"
+                        title={language === "en" ? "Edit Period Rules" : "Sửa Quy Tắc Thời Điểm"}
                         className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -382,7 +818,7 @@ export const SettingsView: React.FC = () => {
                       {!period.isDefault && (
                         <button
                           onClick={() => handleDeletePeriod(period.id, period.name)}
-                          title="Delete Rate Period"
+                          title={language === "en" ? "Delete Rate Period" : "Xóa Thời Điểm"}
                           className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-300 transition border border-slate-700 hover:border-rose-800"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -393,14 +829,14 @@ export const SettingsView: React.FC = () => {
 
                   {period.notes && (
                     <p className="text-xs text-slate-400 bg-slate-950/50 p-2 rounded-lg border border-slate-800/60 italic">
-                      "{period.notes}"
+                      "{getLocalizedPeriodNotes(period.notes)}"
                     </p>
                   )}
 
                   {/* Room Type Rates Grid for this Period */}
                   <div className="border-t border-slate-800 pt-3 space-y-2">
                     <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                      Period Nightly Rates per Room Category
+                      {language === "en" ? "Period Nightly Rates per Room Category" : "Bảng Giá Đêm Theo Loại Phòng"}
                     </span>
                     <div className="grid grid-cols-2 gap-2">
                       {roomTypes.map((rt) => {
@@ -416,13 +852,13 @@ export const SettingsView: React.FC = () => {
                             className="bg-slate-950/60 border border-slate-800/80 p-2 rounded-xl flex justify-between items-center text-xs"
                           >
                             <div>
-                              <span className="font-medium text-slate-300 block text-[11px]">{rt.name}</span>
-                              <span className="text-[10px] text-slate-500">Base: ${rt.baseRate}/n</span>
+                              <span className="font-medium text-slate-300 block text-[11px]">{getLocalizedRoomTypeName(rt.name)}</span>
+                              <span className="text-[10px] text-slate-500">{language === "en" ? "Base: " : "Gốc: "}{formatVND(rt.baseRate)}{language === "en" ? "/night" : "/đêm"}</span>
                             </div>
                             <div className="text-right">
                               <span className="font-mono font-bold text-amber-300 text-xs block">
-                                ${periodRate}
-                                <span className="text-[10px] font-normal text-slate-400">/n</span>
+                                {formatVND(periodRate)}
+                                <span className="text-[10px] font-normal text-slate-400">{language === "en" ? "/night" : "/đêm"}</span>
                               </span>
                               {diffPct !== 0 && (
                                 <span
@@ -489,7 +925,7 @@ export const SettingsView: React.FC = () => {
               >
                 <div>
                   <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-slate-100 text-sm">{rt.name}</h3>
+                    <h3 className="font-bold text-slate-100 text-sm">{getLocalizedRoomTypeName(rt.name)}</h3>
                     <button
                       onClick={() => openEditRoomType(rt)}
                       className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700 text-xs"
@@ -498,29 +934,29 @@ export const SettingsView: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="mt-2 text-2xl font-bold font-mono text-amber-400 flex items-baseline gap-1">
-                    ${rt.baseRate}
-                    <span className="text-xs font-normal text-slate-400">/ night</span>
+                  <div className="mt-2 text-xl font-bold font-mono text-amber-400 flex items-baseline gap-1">
+                    {formatVND(rt.baseRate)}
+                    <span className="text-xs font-normal text-slate-400">{language === "en" ? "/ night" : "/ đêm"}</span>
                   </div>
 
-                  <p className="text-xs text-slate-400 mt-2 line-clamp-2">{rt.description}</p>
+                  <p className="text-xs text-slate-400 mt-2 line-clamp-2">{getLocalizedRoomTypeDesc(rt.description)}</p>
                 </div>
 
                 <div className="border-t border-slate-800 pt-3 text-xs space-y-1.5 text-slate-300">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400 flex items-center gap-1">
                       <Users className="w-3.5 h-3.5 text-slate-500" />
-                      Max Capacity:
+                      {language === "en" ? "Max Capacity:" : "Sức chứa tối đa:"}
                     </span>
-                    <span className="font-semibold text-slate-200">{rt.maxGuests} Guests</span>
+                    <span className="font-semibold text-slate-200">{rt.maxGuests} {language === "en" ? "Guests" : "Khách"}</span>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400 flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                      Physical Inventory:
+                      {language === "en" ? "Physical Inventory:" : "Tổng số phòng:"}
                     </span>
-                    <span className="font-semibold text-emerald-400">{rt.total} Units</span>
+                    <span className="font-semibold text-emerald-400">{rt.total} {language === "en" ? "Units" : "Phòng"}</span>
                   </div>
                 </div>
               </div>
@@ -537,15 +973,15 @@ export const SettingsView: React.FC = () => {
               <div>
                 <h3 className="font-bold text-slate-100 text-sm flex items-center gap-2">
                   <Layers className="w-4 h-4 text-amber-400" />
-                  Multi-Period Rate Comparison Matrix
+                  {language === "en" ? "Multi-Period Rate Comparison Matrix" : "Ma Trận So Sánh Bảng Giá Theo Thời Điểm"}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Side-by-side tariff matrix comparing base rates with multi-period seasonal prices.
+                  {language === "en" ? "Side-by-side tariff matrix comparing base rates with multi-period seasonal prices." : "Bảng so sánh trực quan giá phòng cơ bản và giá áp dụng theo từng thời điểm mùa vụ."}
                 </p>
               </div>
 
               <div className="text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
-                Business Date: <span className="font-mono text-amber-300 font-bold">{businessDate}</span>
+                {language === "en" ? "Business Date: " : "Ngày kinh doanh: "}<span className="font-mono text-amber-300 font-bold">{businessDate}</span>
               </div>
             </div>
 
@@ -554,8 +990,8 @@ export const SettingsView: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 text-[11px] uppercase tracking-wider">
-                    <th className="py-3 px-3 bg-slate-950/60 rounded-tl-xl">Room Category</th>
-                    <th className="py-3 px-3 bg-slate-950/60 text-right">Standard Base</th>
+                    <th className="py-3 px-3 bg-slate-950/60 rounded-tl-xl">{language === "en" ? "Room Category" : "Loại Phòng"}</th>
+                    <th className="py-3 px-3 bg-slate-950/60 text-right">{language === "en" ? "Standard Base" : "Giá Gốc Mặc Định"}</th>
                     {ratePeriods.map((period) => {
                       const active = isPeriodActiveNow(period);
                       return (
@@ -567,13 +1003,13 @@ export const SettingsView: React.FC = () => {
                               : "bg-slate-950/40 text-slate-300"
                           }`}
                         >
-                          <div>{period.name}</div>
+                          <div>{getLocalizedPeriodName(period.name)}</div>
                           <div className="text-[9px] font-mono text-slate-400 font-normal">
                             {period.startDate} → {period.endDate}
                           </div>
                           {active && (
                             <span className="text-[9px] text-emerald-400 block uppercase font-bold">
-                              ★ Current Active
+                              {language === "en" ? "★ Current Active" : "★ Đang Áp Dụng"}
                             </span>
                           )}
                         </th>
@@ -587,15 +1023,15 @@ export const SettingsView: React.FC = () => {
                       <td className="py-3 px-3 font-bold text-slate-100 flex items-center gap-2">
                         <Building2 className="w-3.5 h-3.5 text-amber-400" />
                         <div>
-                          <span>{rt.name}</span>
+                          <span>{getLocalizedRoomTypeName(rt.name)}</span>
                           <span className="text-[10px] text-slate-400 block font-normal">
-                            Max {rt.maxGuests} guests • {rt.total} rooms
+                            {language === "en" ? `Max ${rt.maxGuests} guests • ${rt.total} rooms` : `Tối đa ${rt.maxGuests} khách • ${rt.total} phòng`}
                           </span>
                         </div>
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-amber-400">
-                        ${rt.baseRate}/n
+                        {formatVND(rt.baseRate)}{language === "en" ? "/night" : "/đêm"}
                       </td>
 
                       {ratePeriods.map((period) => {
@@ -613,8 +1049,8 @@ export const SettingsView: React.FC = () => {
                               active ? "bg-amber-950/20 border-x border-amber-500/20 font-bold" : ""
                             }`}
                           >
-                            <span className="text-slate-100 font-bold text-xs">${periodRate}</span>
-                            <span className="text-[10px] text-slate-400">/n</span>
+                            <span className="text-slate-100 font-bold text-xs">{formatVND(periodRate)}</span>
+                            <span className="text-[10px] text-slate-400">{language === "en" ? "/night" : "/đêm"}</span>
                             {diffPct !== 0 && (
                               <span
                                 className={`block text-[9px] font-bold ${
@@ -668,14 +1104,15 @@ export const SettingsView: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-medium mb-1">Base Rate ($)</label>
+                  <label className="block text-slate-300 font-medium mb-1">Giá gốc (x1.000đ)</label>
                   <input
                     type="number"
                     min="1"
                     required
+                    placeholder="e.g. 450"
                     value={rtFormData.baseRate}
                     onChange={(e) => setRtFormData({ ...rtFormData, baseRate: Number(e.target.value) })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-amber-500 font-bold"
                   />
                 </div>
 
@@ -837,10 +1274,9 @@ export const SettingsView: React.FC = () => {
                       >
                         <div>
                           <span className="font-semibold text-slate-200 text-xs block">{rt.name}</span>
-                          <span className="text-[10px] text-slate-500">Base Rate: ${rt.baseRate}/night</span>
+                          <span className="text-[10px] text-slate-500">Giá gốc: {formatVND(rt.baseRate)}/đêm</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-slate-400 font-mono text-xs">$</span>
                           <input
                             type="number"
                             min="1"
@@ -855,8 +1291,9 @@ export const SettingsView: React.FC = () => {
                                 }
                               });
                             }}
-                            className="w-20 bg-slate-800 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded-lg text-right focus:outline-none focus:border-amber-500"
+                            className="w-24 bg-slate-800 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded-lg text-right focus:outline-none focus:border-amber-500"
                           />
+                          <span className="text-slate-400 font-mono text-[10px]">.000 VNĐ</span>
                         </div>
                       </div>
                     );
@@ -888,6 +1325,148 @@ export const SettingsView: React.FC = () => {
                   className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
                 >
                   Save Rate Period
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: ADD / EDIT SERVICE RATE ITEM --- */}
+      {isServiceModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                <Tag className="w-5 h-5 text-amber-400" />
+                {editingService
+                  ? (language === "en" ? "Edit Service Tariff" : "Chỉnh Sửa Giá Dịch Vụ")
+                  : (language === "en" ? "Add New Service / Surcharge" : "Thêm Dịch Vụ / Phụ Thu Mới")}
+              </h3>
+              <button
+                onClick={() => setIsServiceModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveServiceSubmit} className="space-y-4 text-xs">
+              {/* Category */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  {language === "en" ? "Service Category" : "Phân Loại Dịch Vụ"} <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={serviceFormData.category}
+                  onChange={(e) => setServiceFormData({ ...serviceFormData, category: e.target.value as ServiceCategory })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                >
+                  <option value="water">{language === "en" ? "💧 Drinking Water / Minibar" : "💧 Nước Uống / Đồ Uống Minibar"}</option>
+                  <option value="laundry">{language === "en" ? "🧺 Laundry & Dry Cleaning" : "🧺 Giặt Ủi & Là Sấy"}</option>
+                  <option value="late_checkout">{language === "en" ? "⏰ Late Checkout Surcharge" : "⏰ Trả Phòng Muộn (Late Checkout)"}</option>
+                  <option value="extra_bed">{language === "en" ? "🛏️ Extra Bed & Guest" : "🛏️ Giường Phụ & Khách Thêm"}</option>
+                  <option value="other">{language === "en" ? "🧰 Other Services" : "🧰 Dịch Vụ Khác"}</option>
+                </select>
+              </div>
+
+              {/* Service Name */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  {language === "en" ? "Service / Surcharge Name" : "Tên Dịch Vụ / Tên Phụ Thu"} <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={language === "en" ? "e.g. Mineral Water 500ml, Late Checkout (12h - 15h)..." : "Ví dụ: Nước suối Lavie 500ml, Trả phòng muộn (12h - 15h)..."}
+                  value={serviceFormData.name}
+                  onChange={(e) => setServiceFormData({ ...serviceFormData, name: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                />
+              </div>
+
+              {/* Rate & Unit */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    {language === "en" ? "Unit Rate (x 1,000 VND)" : "Đơn Giá (x 1.000 VNĐ)"} <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="1"
+                      value={serviceFormData.rate}
+                      onChange={(e) => setServiceFormData({ ...serviceFormData, rate: Number(e.target.value) })}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-3 pr-16 py-2 text-slate-100 font-mono font-bold text-amber-300 focus:outline-none focus:border-amber-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-[10px]">.000 VNĐ</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-mono mt-1 block">
+                    = {formatVND(serviceFormData.rate)}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    {language === "en" ? "Unit of Measurement" : "Đơn Vị Tính"} <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={language === "en" ? "bottle, can, kg, piece, room, night..." : "chai, lon, kg, cái, phòng, đêm, lần..."}
+                    value={serviceFormData.unit}
+                    onChange={(e) => setServiceFormData({ ...serviceFormData, unit: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  {language === "en" ? "Description / Detailed Notes" : "Mô Tả / Ghi Chú Chi Tiết"}
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder={language === "en" ? "Description or terms for this service..." : "Mô tả quy định hoặc thông tin chi tiết dịch vụ..."}
+                  value={serviceFormData.description}
+                  onChange={(e) => setServiceFormData({ ...serviceFormData, description: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Is Available Checkbox */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isAvailableService"
+                  checked={serviceFormData.isAvailable}
+                  onChange={(e) => setServiceFormData({ ...serviceFormData, isAvailable: e.target.checked })}
+                  className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-amber-500"
+                />
+                <label htmlFor="isAvailableService" className="text-slate-300 font-medium select-none cursor-pointer">
+                  {language === "en" ? "Active / Available for hotel guests (Ready for billing)" : "Đang cung cấp tại khách sạn (Sẵn sàng tính phí)"}
+                </label>
+              </div>
+
+              {/* Buttons */}
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsServiceModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-medium"
+                >
+                  {language === "en" ? "Cancel" : "Hủy Bỏ"}
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
+                >
+                  {editingService
+                    ? (language === "en" ? "Update Service" : "Cập Nhật")
+                    : (language === "en" ? "Save Service" : "Lưu Dịch Vụ")}
                 </button>
               </div>
             </form>

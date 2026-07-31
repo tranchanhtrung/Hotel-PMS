@@ -11,6 +11,7 @@ import {
   ArrowRight,
   FileText
 } from "lucide-react";
+import { formatVND } from "../../utils/formatters";
 
 export const NightAuditView: React.FC = () => {
   const { businessDate, auditLogs, stats, runNightAudit, rooms, reservations } = usePms();
@@ -24,6 +25,8 @@ export const NightAuditView: React.FC = () => {
   };
 
   const activeInHouse = reservations.filter((r) => r.status === "checked_in");
+
+  const estPosting = activeInHouse.reduce((acc, r) => acc + (r.totalAmount / 2), 0);
 
   return (
     <div className="space-y-5">
@@ -70,7 +73,7 @@ export const NightAuditView: React.FC = () => {
           <div>
             <span className="text-slate-400">Estimated Nightly Posting</span>
             <div className="text-lg font-bold font-mono text-emerald-300 mt-0.5">
-              ${activeInHouse.reduce((acc, r) => acc + (r.totalAmount / 2), 0).toFixed(2)}
+              {formatVND(estPosting)}
             </div>
             <p className="text-[10px] text-slate-500">Auto-credited to active guest folios</p>
           </div>
@@ -99,19 +102,19 @@ export const NightAuditView: React.FC = () => {
 
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
           <span className="text-xs text-slate-400">Average Daily Rate (ADR)</span>
-          <div className="text-2xl font-bold font-mono text-amber-300 mt-1">${stats.adr.toFixed(2)}</div>
+          <div className="text-2xl font-bold font-mono text-amber-300 mt-1">{formatVND(stats.adr)}</div>
           <span className="text-[10px] text-slate-500">Average price per occupied room</span>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
           <span className="text-xs text-slate-400">RevPAR</span>
-          <div className="text-2xl font-bold font-mono text-sky-300 mt-1">${stats.revpar.toFixed(2)}</div>
+          <div className="text-2xl font-bold font-mono text-sky-300 mt-1">{formatVND(stats.revpar)}</div>
           <span className="text-[10px] text-slate-500">Revenue per available room</span>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
           <span className="text-xs text-slate-400">Today Revenue</span>
-          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">${stats.todayRevenue.toFixed(2)}</div>
+          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">{formatVND(stats.todayRevenue)}</div>
           <span className="text-[10px] text-slate-500">Room charges + Extra POS items</span>
         </div>
       </div>

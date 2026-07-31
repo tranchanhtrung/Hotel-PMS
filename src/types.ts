@@ -27,6 +27,20 @@ export interface Room {
   lastCleanedAt?: string;
 }
 
+export interface GuestProfile {
+  id?: string;
+  fullName: string;
+  dob: string;
+  gender: "Nam" | "Nữ" | "Khác";
+  idNumber: string;
+  nationality: string;
+  address: string;
+  visaExpiryDate?: string;
+  phone?: string;
+  email?: string;
+  isPrimary?: boolean;
+}
+
 export type ReservationStatus = "confirmed" | "checked_in" | "checked_out" | "cancelled";
 
 export interface Reservation {
@@ -41,6 +55,7 @@ export interface Reservation {
   guestNationality?: string;
   guestAddress?: string;
   visaExpiryDate?: string;
+  guests?: GuestProfile[];
   checkInTime?: string; // Giờ, ngày đến
   checkOutTime?: string; // Giờ, ngày đi
   notes?: string;
@@ -146,6 +161,18 @@ export interface RatePeriod {
   multiplier?: number;
   isDefault?: boolean;
   notes?: string;
+}
+
+export type ServiceCategory = "water" | "laundry" | "late_checkout" | "extra_bed" | "other";
+
+export interface ServiceRateItem {
+  id: string;
+  category: ServiceCategory;
+  name: string;
+  unit: string;
+  rate: number;
+  description?: string;
+  isAvailable: boolean;
 }
 
 export type TerminalMode = "front_desk" | "housekeeping" | "manager" | "split_terminal";
