@@ -23,8 +23,31 @@ export const FolioModal: React.FC = () => {
     serviceRates,
     addFolioCharge,
     checkOut,
-    businessDate
+    businessDate,
+    language
   } = usePms();
+
+  const getLocalizedServiceName = (name: string) => {
+    if (language !== "en") return name;
+    if (name.includes("Aquafina")) return "Aquafina Mineral Water 500ml";
+    if (name.includes("Perrier")) return "Perrier Sparkling Water 330ml";
+    if (name.includes("Nước ngọt")) return "Soft Drinks (Coca / Pepsi / RedBull)";
+    if (name.includes("Bia Saigon") || name.includes("Saigon Special")) return "Saigon Special / Tiger Beer 330ml";
+    if (name.includes("Giặt sấy quần áo")) return "Standard Laundry & Drying";
+    if (name.includes("Giặt hấp") || name.includes("sơ mi")) return "Express Dry Cleaning & Shirt Ironing";
+    if (name.includes("Giặt khô Vest") || name.includes("Đầm dạ hội")) return "Dry Cleaning Suit / Evening Gown";
+    if (name.includes("Trả phòng muộn 1 - 2") || name.includes("Trả phòng muộn 12")) return "Late Checkout 1 - 2 hrs (Till 14:00)";
+    if (name.includes("Trả phòng muộn 3 - 5") || name.includes("Trả phòng muộn 15")) return "Late Checkout 3 - 5 hrs (Till 17:00)";
+    if (name.includes("Trả phòng sau 18:00")) return "Full Day Late Checkout (After 18:00)";
+    if (name.includes("Giường phụ") || name.includes("Extra Bed")) return "Extra Bed Rollaway";
+    if (name.includes("Khách thứ 3") || name.includes("khách thứ 3")) return "3rd Guest Extra Occupancy Surcharge";
+    if (name.includes("chăn gối phụ em bé") || name.includes("em bé")) return "Baby Blanket & Pillow Set";
+    if (name.includes("Đưa đón sân bay")) return "Airport Shuttle Service (4-Seater)";
+    if (name.includes("Thuê xe máy")) return "Scooter Rental (24 Hours)";
+    if (name.includes("thú cưng")) return "Small Pet Fee (< 5kg)";
+    if (name.includes("In ấn") || name.includes("Photo")) return "A4 Printing & Photocopy";
+    return name;
+  };
 
   const [extraDesc, setExtraDesc] = useState("Minibar - Bottled Water x2");
   const [extraAmount, setExtraAmount] = useState(4.00);
@@ -210,14 +233,14 @@ export const FolioModal: React.FC = () => {
             {/* Folio Items Table */}
             <div className="bg-slate-800/40 rounded-xl border border-slate-800 overflow-hidden text-xs">
               <div className="p-3 bg-slate-800/80 font-semibold text-slate-300 flex justify-between items-center">
-                <span>Chi Tiết Phí & Dịch Vụ / Itemized Charges</span>
+                <span>{language === "en" ? "Itemized Charges & Services" : "Chi Tiết Phí & Dịch Vụ"}</span>
                 <span className="text-amber-400 font-mono">{formatVND(totalCharges)}</span>
               </div>
               <div className="max-h-48 overflow-y-auto divide-y divide-slate-800/60">
                 {folio.items.map((item) => (
                   <div key={item.id} className="p-2.5 flex justify-between items-center text-slate-300 hover:bg-slate-800/30">
                     <div>
-                      <div className="font-medium text-slate-100">{item.description}</div>
+                      <div className="font-medium text-slate-100">{getLocalizedServiceName(item.description)}</div>
                       <span className="text-[10px] text-slate-500 font-mono">{item.date} • {item.category}</span>
                     </div>
                     <div className="font-mono font-semibold text-slate-100">{formatVND(item.amount)}</div>
@@ -229,7 +252,7 @@ export const FolioModal: React.FC = () => {
             {/* Quick Add Extra POS Charge */}
             <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-800 space-y-3">
               <span className="font-semibold text-amber-400 uppercase tracking-wider text-[10px]">
-                Ghi Phụ Phí / Dịch Vụ POS Bổ Sung (Đơn vị: 1.000 VNĐ)
+                {language === "en" ? "Add Extra Charges / POS Services (Unit: 1.000 VNĐ)" : "Ghi Phụ Phí / Dịch Vụ POS Bổ Sung (Đơn vị: 1.000 VNĐ)"}
               </span>
 
               {/* Quick Presets from Configured Service Rates */}
@@ -246,20 +269,22 @@ export const FolioModal: React.FC = () => {
                     if (srv.category === "water") catKey = "minibar";
                     else if (srv.category === "laundry") catKey = "laundry";
 
+                    const localizedName = getLocalizedServiceName(srv.name);
+
                     return (
                       <button
                         key={srv.id}
                         type="button"
                         onClick={() => {
-                          setExtraDesc(srv.name);
+                          setExtraDesc(localizedName);
                           setExtraAmount(srv.rate);
                           setExtraCat(catKey);
                         }}
                         className="bg-slate-800 hover:bg-amber-500/20 hover:border-amber-500/40 px-2 py-1 rounded border border-slate-700/80 text-[11px] text-slate-200 transition flex items-center gap-1"
-                        title={`${srv.name} (${formatVND(srv.rate)} / ${srv.unit})`}
+                        title={`${localizedName} (${formatVND(srv.rate)} / ${srv.unit})`}
                       >
                         <span>{icon}</span>
-                        <span className="font-medium truncate max-w-[120px]">{srv.name}</span>
+                        <span className="font-medium truncate max-w-[120px]">{localizedName}</span>
                         <span className="text-amber-400 font-mono font-bold">({srv.rate}.000đ)</span>
                       </button>
                     );
@@ -268,31 +293,31 @@ export const FolioModal: React.FC = () => {
                   <>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc("Nước suối đóng chai x2"); setExtraAmount(40); setExtraCat("minibar"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Bottled Water x2" : "Nước suối đóng chai x2"); setExtraAmount(40); setExtraCat("minibar"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
-                      🥤 Nước Suối (40.000đ)
+                      🥤 {language === "en" ? "Bottled Water (40.000đ)" : "Nước Suối (40.000đ)"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc("Dịch vụ giặt ủi lấy liền"); setExtraAmount(100); setExtraCat("laundry"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Express Laundry Service" : "Dịch vụ giặt ủi lấy liền"); setExtraAmount(100); setExtraCat("laundry"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
-                      👕 Giặt ủi (100.000đ)
+                      👕 {language === "en" ? "Laundry (100.000đ)" : "Giặt ủi (100.000đ)"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc("Phí Trả Phòng Trễ (2 giờ)"); setExtraAmount(150); setExtraCat("extra"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Late Checkout Fee (2 hrs)" : "Phí Trả Phòng Trễ (2 giờ)"); setExtraAmount(150); setExtraCat("extra"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
                       ⏰ Late Checkout (150.000đ)
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc("Thêm Giường Phụ & Bộ Khăn"); setExtraAmount(120); setExtraCat("extra"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Extra Bed & Towel Set" : "Thêm Giường Phụ & Bộ Khăn"); setExtraAmount(120); setExtraCat("extra"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
-                      🛏️ Thêm Giường/Khăn (120.000đ)
+                      🛏️ {language === "en" ? "Extra Bed / Towels (120.000đ)" : "Thêm Giường/Khăn (120.000đ)"}
                     </button>
                   </>
                 )}
@@ -301,14 +326,14 @@ export const FolioModal: React.FC = () => {
               <form onSubmit={handleAddCharge} className="flex gap-2 text-xs">
                 <input
                   type="text"
-                  placeholder="Mô tả khoản phí..."
+                  placeholder={language === "en" ? "Charge description..." : "Mô tả khoản phí..."}
                   value={extraDesc}
                   onChange={(e) => setExtraDesc(e.target.value)}
                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-amber-500"
                 />
                 <input
                   type="number"
-                  placeholder="Số tiền (1.000đ)"
+                  placeholder={language === "en" ? "Amount (1.000đ)" : "Số tiền (1.000đ)"}
                   value={extraAmount}
                   onChange={(e) => setExtraAmount(Number(e.target.value))}
                   className="w-32 bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:outline-none focus:border-amber-500"
@@ -317,7 +342,7 @@ export const FolioModal: React.FC = () => {
                   type="submit"
                   className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-2 rounded-lg transition"
                 >
-                  + Thêm Phí
+                  {language === "en" ? "+ Add Charge" : "+ Thêm Phí"}
                 </button>
               </form>
             </div>
@@ -325,7 +350,7 @@ export const FolioModal: React.FC = () => {
             {/* Payments Summary */}
             <div className="bg-slate-800/40 rounded-xl border border-slate-800 p-3.5 space-y-3 text-xs">
               <div className="flex justify-between items-center text-slate-300">
-                <span>Thanh Toán Đã Nhận / Payments Received</span>
+                <span>{language === "en" ? "Payments Received" : "Thanh Toán Đã Nhận"}</span>
                 <span className="font-mono text-emerald-400 font-semibold">{formatVND(totalPaid)}</span>
               </div>
 
@@ -336,13 +361,13 @@ export const FolioModal: React.FC = () => {
                   onChange={(e) => setPaymentMethod(e.target.value as any)}
                   className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-100 text-xs"
                 >
-                  <option value="Credit Card">Thẻ Tín Dụng</option>
-                  <option value="Cash">Tiền Mặt</option>
-                  <option value="Bank Transfer">Chuyển Khoản / QR</option>
+                  <option value="Credit Card">{language === "en" ? "Credit Card" : "Thẻ Tín Dụng"}</option>
+                  <option value="Cash">{language === "en" ? "Cash" : "Tiền Mặt"}</option>
+                  <option value="Bank Transfer">{language === "en" ? "Bank Transfer / QR" : "Chuyển Khoản / QR"}</option>
                 </select>
                 <input
                   type="number"
-                  placeholder="Số tiền thanh toán (1.000đ)..."
+                  placeholder={language === "en" ? "Payment amount (1.000đ)..." : "Số tiền thanh toán (1.000đ)..."}
                   value={paymentAmount || ""}
                   onChange={(e) => setPaymentAmount(Number(e.target.value))}
                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono text-xs focus:outline-none focus:border-emerald-500"
@@ -351,7 +376,7 @@ export const FolioModal: React.FC = () => {
                   type="submit"
                   className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-lg transition"
                 >
-                  Ghi Nhận Thu Tiền
+                  {language === "en" ? "Record Payment" : "Ghi Nhận Thu Tiền"}
                 </button>
               </form>
             </div>
@@ -369,10 +394,10 @@ export const FolioModal: React.FC = () => {
               <div>
                 <span className="text-xs text-slate-400 block font-medium">
                   {balanceDue > 0
-                    ? "Cần Thanh Toán Còn Lại / Balance Due"
+                    ? (language === "en" ? "Balance Due" : "Cần Thanh Toán Còn Lại")
                     : balanceDue < 0
-                    ? "Tiền Cọc Dư (Cần Hoàn Trả Khách)"
-                    : "Cân Bằng Hóa Đơn (Đã Thanh Toán Xong)"}
+                    ? (language === "en" ? "Excess Deposit (Refund Due)" : "Tiền Cọc Dư (Cần Hoàn Trả Khách)")
+                    : (language === "en" ? "Folio Balanced (Fully Settled)" : "Cân Bằng Hóa Đơn (Đã Thanh Toán Xong)")}
                 </span>
                 <span
                   className={`text-2xl font-bold font-mono ${
@@ -391,7 +416,9 @@ export const FolioModal: React.FC = () => {
                 </span>
                 {balanceDue < 0 && (
                   <span className="text-[11px] text-emerald-400 block mt-0.5">
-                    ✓ Khách trả thừa {formatVND(Math.abs(balanceDue))}. Hoàn trả khách khi check-out.
+                    {language === "en"
+                      ? `✓ Guest overpaid ${formatVND(Math.abs(balanceDue))}. Refund to guest upon checkout.`
+                      : `✓ Khách trả thừa ${formatVND(Math.abs(balanceDue))}. Hoàn trả khách khi check-out.`}
                   </span>
                 )}
               </div>
@@ -405,7 +432,7 @@ export const FolioModal: React.FC = () => {
                       className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-3 py-2 rounded-xl border border-slate-700 text-xs flex items-center gap-1.5 transition"
                     >
                       <Printer className="w-4 h-4" />
-                      <span>In Hóa Đơn</span>
+                      <span>{language === "en" ? "Print Receipt" : "In Hóa Đơn"}</span>
                     </button>
 
                     <button
@@ -418,20 +445,20 @@ export const FolioModal: React.FC = () => {
                       }`}
                     >
                       {balanceDue > 0
-                        ? "Thanh Toán & Check-Out"
+                        ? (language === "en" ? "Settle & Check-Out" : "Thanh Toán & Check-Out")
                         : balanceDue < 0
-                        ? `Hoàn ${formatVND(Math.abs(balanceDue))} & Check-Out`
-                        : "Check-Out Khách"}
+                        ? (language === "en" ? `Refund ${formatVND(Math.abs(balanceDue))} & Check-Out` : `Hoàn ${formatVND(Math.abs(balanceDue))} & Check-Out`)
+                        : (language === "en" ? "Check-Out Guest" : "Check-Out Khách")}
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 bg-slate-900 border border-amber-500/50 p-2 rounded-xl animate-in fade-in">
                     <span className="text-[11px] text-slate-200 font-medium px-1">
                       {balanceDue > 0
-                        ? `Thu ${formatVND(balanceDue)} & check-out?`
+                        ? (language === "en" ? `Collect ${formatVND(balanceDue)} & check-out?` : `Thu ${formatVND(balanceDue)} & check-out?`)
                         : balanceDue < 0
-                        ? `Hoàn ${formatVND(Math.abs(balanceDue))} & check-out?`
-                        : "Xác nhận check-out?"}
+                        ? (language === "en" ? `Refund ${formatVND(Math.abs(balanceDue))} & check-out?` : `Hoàn ${formatVND(Math.abs(balanceDue))} & check-out?`)
+                        : (language === "en" ? "Confirm check-out?" : "Xác nhận check-out?")}
                     </span>
                     <button
                       type="button"
@@ -440,9 +467,9 @@ export const FolioModal: React.FC = () => {
                       className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow cursor-pointer disabled:opacity-50"
                     >
                       {isCheckingOut ? (
-                        <span>Đang Check-Out...</span>
+                        <span>{language === "en" ? "Checking Out..." : "Đang Check-Out..."}</span>
                       ) : (
-                        <span>Xác Nhận Check-Out</span>
+                        <span>{language === "en" ? "Confirm Check-Out" : "Xác Nhận Check-Out"}</span>
                       )}
                     </button>
                     <button
@@ -450,7 +477,7 @@ export const FolioModal: React.FC = () => {
                       onClick={() => setShowCheckoutConfirm(false)}
                       className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-2.5 py-1.5 rounded-lg text-xs border border-slate-700"
                     >
-                      Hủy
+                      {language === "en" ? "Cancel" : "Hủy"}
                     </button>
                   </div>
                 )}
