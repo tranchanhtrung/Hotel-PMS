@@ -1,0 +1,6 @@
+{
+  "name": "Grand Stay PMS - Economy Hotel System",
+  "description": "Real-time Property Management System for economy hotels with Tape Chart, Front Desk Check-In/Out, Housekeeping, Folio Billing, and Night Audit.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
