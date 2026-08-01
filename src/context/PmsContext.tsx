@@ -8,6 +8,8 @@ import {
   PmsStats,
   ActiveView,
   TerminalMode,
+  UserRole,
+  UserAccount,
   Housekeeper,
   ReportSubmission,
   RatePeriod,
@@ -15,6 +17,86 @@ import {
 } from "../types";
 
 import { Language, translations } from "../i18n/translations";
+
+export const DEFAULT_USER_ACCOUNTS: UserAccount[] = [
+  {
+    id: "usr_admin",
+    username: "admin",
+    name: "Sarah Jenkins",
+    role: "admin",
+    title: "General Manager & System Admin",
+    department: "Executive Office",
+    pin: "1234",
+    avatar: "👑",
+    allowedViews: ["tape_chart", "front_desk", "housekeeping", "reservations", "reports", "settings", "night_audit"]
+  },
+  {
+    id: "usr_frontdesk",
+    username: "reception",
+    name: "Nguyen Van A",
+    role: "front_desk",
+    title: "Front Desk Supervisor",
+    department: "Front Office",
+    pin: "1111",
+    avatar: "🛎️",
+    allowedViews: ["tape_chart", "front_desk", "reservations"]
+  },
+  {
+    id: "usr_housekeeper",
+    username: "housekeeper",
+    name: "Tran Thi B",
+    role: "housekeeper",
+    title: "Executive Housekeeper",
+    department: "Housekeeping",
+    pin: "2222",
+    avatar: "🧹",
+    allowedViews: ["housekeeping", "tape_chart"]
+  },
+  {
+    id: "usr_attendant",
+    username: "attendant",
+    name: "Le Van C",
+    role: "room_attendant",
+    title: "Senior Room Attendant",
+    department: "Housekeeping",
+    pin: "3333",
+    avatar: "🧼",
+    allowedViews: ["housekeeping"]
+  },
+  {
+    id: "usr_sales",
+    username: "sales",
+    name: "Pham Minh D",
+    role: "sales",
+    title: "Sales & Revenue Manager",
+    department: "Sales & Marketing",
+    pin: "4444",
+    avatar: "📈",
+    allowedViews: ["reservations", "tape_chart", "settings", "reports"]
+  },
+  {
+    id: "usr_nightaudit",
+    username: "audit",
+    name: "Hoang Van E",
+    role: "night_audit",
+    title: "Night Auditor & Duty Manager",
+    department: "Night Audit",
+    pin: "5555",
+    avatar: "🌙",
+    allowedViews: ["night_audit", "reports", "front_desk", "tape_chart"]
+  },
+  {
+    id: "usr_accounting",
+    username: "accounting",
+    name: "Vo Thi F",
+    role: "accounting",
+    title: "Chief Accountant & Controller",
+    department: "Finance & Accounting",
+    pin: "6666",
+    avatar: "💼",
+    allowedViews: ["reports", "front_desk", "night_audit"]
+  }
+];
 
 interface PmsContextType {
   language: Language;
@@ -40,6 +122,16 @@ interface PmsContextType {
   selectedRoom: Room | null;
   setSelectedRoom: (room: Room | null) => void;
   
+  // Auth & Roles
+  currentUser: UserAccount;
+  userAccounts: UserAccount[];
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  loginAsRole: (role: UserRole) => void;
+  loginWithCredentials: (username: string, pin: string) => boolean;
+  logout: () => void;
+  canAccessView: (view: ActiveView) => boolean;
+
   // Modals
   isCheckInModalOpen: boolean;
   setIsCheckInModalOpen: (open: boolean) => void;
@@ -78,6 +170,7 @@ interface PmsContextType {
   toggleServiceRate: (id: string) => Promise<boolean>;
   getAiInsights: () => Promise<string>;
 }
+
 
 const PmsContext = createContext<PmsContextType | undefined>(undefined);
 
@@ -124,8 +217,68 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [terminalMode, setTerminalMode] = useState<TerminalMode>("front_desk");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
+  // Auth & Role Segregation State
+  const [userAccounts] = useState<UserAccount[]>(DEFAULT_USER_ACCOUNTS);
+  const [currentUser, setCurrentUser] = useState<UserAccount>(() => {
+    const saved = localStorage.getItem("pms_user");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const match = DEFAULT_USER_ACCOUNTS.find(a => a.id === parsed.id || a.role === parsed.role);
+        if (match) return match;
+      } catch (e) {}
+    }
+    return DEFAULT_USER_ACCOUNTS[0]; // Admin default
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  const canAccessView = useCallback((view: ActiveView): boolean => {
+    if (!currentUser) return false;
+    return currentUser.allowedViews.includes(view);
+  }, [currentUser]);
+
+  const loginAsRole = useCallback((role: UserRole) => {
+    const account = userAccounts.find(u => u.role === role) || DEFAULT_USER_ACCOUNTS[0];
+    setCurrentUser(account);
+    localStorage.setItem("pms_user", JSON.stringify(account));
+    setIsAuthModalOpen(false);
+
+    // If current activeView is not allowed for this role, switch to their primary allowed view
+    if (!account.allowedViews.includes(activeView)) {
+      setActiveView(account.allowedViews[0] || "tape_chart");
+    }
+
+    // Auto set appropriate terminal mode for room attendant or housekeeper
+    if (role === "room_attendant") {
+      setTerminalMode("housekeeping");
+    } else if (role === "front_desk") {
+      setTerminalMode("front_desk");
+    }
+  }, [userAccounts, activeView]);
+
+  const loginWithCredentials = useCallback((username: string, pin: string): boolean => {
+    const match = userAccounts.find(
+      u => (u.username.toLowerCase() === username.toLowerCase() || u.name.toLowerCase().includes(username.toLowerCase())) && u.pin === pin
+    );
+    if (match) {
+      setCurrentUser(match);
+      localStorage.setItem("pms_user", JSON.stringify(match));
+      setIsAuthModalOpen(false);
+      if (!match.allowedViews.includes(activeView)) {
+        setActiveView(match.allowedViews[0] || "tape_chart");
+      }
+      return true;
+    }
+    return false;
+  }, [userAccounts, activeView]);
+
+  const logout = useCallback(() => {
+    setIsAuthModalOpen(true);
+  }, []);
+
   // Modals
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState<boolean>(false);
+
   const [selectedReservationForCheckIn, setSelectedReservationForCheckIn] = useState<Reservation | null>(null);
   const [isFolioModalOpen, setIsFolioModalOpen] = useState<boolean>(false);
   const [activeFolioReservation, setActiveFolioReservation] = useState<Reservation | null>(null);
@@ -556,7 +709,16 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setTerminalMode,
         selectedRoom,
         setSelectedRoom,
+        currentUser,
+        userAccounts,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        loginAsRole,
+        loginWithCredentials,
+        logout,
+        canAccessView,
         isCheckInModalOpen,
+
         setIsCheckInModalOpen,
         selectedReservationForCheckIn,
         setSelectedReservationForCheckIn,

@@ -15,7 +15,9 @@ import {
   Clock,
   FileText,
   Sliders,
-  Globe
+  Globe,
+  Lock,
+  User
 } from "lucide-react";
 import { ActiveView, TerminalMode } from "../types";
 
@@ -34,7 +36,10 @@ export const Header: React.FC = () => {
     setIsCheckInModalOpen,
     setSelectedReservationForCheckIn,
     setIsAiModalOpen,
-    runNightAudit
+    runNightAudit,
+    currentUser,
+    setIsAuthModalOpen,
+    canAccessView
   } = usePms();
 
   const handleQuickWalkIn = () => {
@@ -51,6 +56,19 @@ export const Header: React.FC = () => {
     { id: "settings", labelKey: "settings", defaultLabel: "Room & Period Rates", icon: <Sliders className="w-4 h-4" /> },
     { id: "night_audit", labelKey: "nightAudit", defaultLabel: "Night Audit & Logs", icon: <ShieldAlert className="w-4 h-4" /> },
   ];
+
+  const getRoleLabelKey = (role: string) => {
+    switch (role) {
+      case "admin": return "roleAdmin";
+      case "front_desk": return "roleFrontDesk";
+      case "housekeeper": return "roleHousekeeper";
+      case "room_attendant": return "roleRoomAttendant";
+      case "sales": return "roleSales";
+      case "night_audit": return "roleNightAudit";
+      case "accounting": return "roleAccounting";
+      default: return role;
+    }
+  };
 
   return (
     <header className="bg-slate-900 text-slate-100 border-b border-slate-800 sticky top-0 z-40 shadow-md">
@@ -80,6 +98,30 @@ export const Header: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Logged in User Badge & Switch Role */}
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            id="btn-user-role-badge"
+            title="Click to Switch Staff Account or Permission Role"
+            className="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 text-slate-100 px-2.5 py-1 rounded-lg border border-amber-500/40 shadow-sm transition group cursor-pointer"
+          >
+            <span className="text-base leading-none">{currentUser?.avatar}</span>
+            <div className="text-left leading-tight">
+              <div className="font-semibold text-amber-300 text-[11px] group-hover:text-amber-200 flex items-center gap-1">
+                <span>{currentUser?.name}</span>
+                <span className="text-[9px] bg-slate-900 text-slate-300 px-1 py-0.2 rounded border border-slate-700 font-mono uppercase">
+                  {currentUser?.role}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 truncate max-w-[130px] hidden sm:block">
+                {t(getRoleLabelKey(currentUser?.role || "admin"))}
+              </div>
+            </div>
+            <span className="text-[10px] bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded ml-1 group-hover:bg-amber-400 transition">
+              {t("switchRoleBtn")}
+            </span>
+          </button>
+
           {/* Language Selector Toggle */}
           <button
             onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
@@ -132,6 +174,8 @@ export const Header: React.FC = () => {
         <nav className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
           {navItems.map((item) => {
             const isActive = activeView === item.id;
+            const isAllowed = canAccessView(item.id);
+
             return (
               <button
                 key={item.id}
@@ -140,11 +184,16 @@ export const Header: React.FC = () => {
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
                   isActive
                     ? "bg-slate-800 text-amber-400 border border-slate-700 shadow-inner"
-                    : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/50"
+                    : isAllowed
+                    ? "text-slate-300 hover:text-slate-100 hover:bg-slate-800/50"
+                    : "text-slate-500 hover:text-slate-400 bg-slate-950/40 opacity-70"
                 }`}
               >
                 {item.icon}
                 <span>{t(item.labelKey)}</span>
+                {!isAllowed && (
+                  <Lock className="w-3 h-3 text-rose-400 ml-0.5" title="Access Restricted for current role" />
+                )}
               </button>
             );
           })}

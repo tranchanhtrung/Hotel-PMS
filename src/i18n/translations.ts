@@ -87,6 +87,23 @@ export const translations = {
     applyTariffToInventory: "Áp Dụng Bảng Giá Vào Phòng Trống",
     save: "Lưu Cấu Hình",
 
+    // Auth & Roles
+    loginTitle: "Hệ Thống Đăng Nhập & Phân Quyền PMS",
+    loginSubtitle: "Vui lòng chọn tài khoản nhân viên hoặc nhập mã PIN để truy cập các chức năng tương ứng",
+    quickRoleSwitch: "Chuyển Đổi Quyền Nhanh (Demo 1-Click)",
+    customPinLogin: "Đăng Nhập Theo Tên & PIN",
+    switchRoleBtn: "Đổi Tài Khoản / Quyền",
+    logoutBtn: "Đăng Xuất",
+    roleAdmin: "Admin (Quản Trị Hệ Thống)",
+    roleFrontDesk: "Lễ Tân (Front Desk)",
+    roleHousekeeper: "Trưởng Buồng Phòng (Supervisor)",
+    roleRoomAttendant: "Nhân Viên Buồng (Attendant)",
+    roleSales: "Kinh Doanh & Yield (Sales)",
+    roleNightAudit: "Kiểm Đêm (Night Auditor)",
+    roleAccounting: "Kế Toán & Tài Chính (Accounting)",
+    accessDenied: "Quyền Truy Cập Bị Hạn Chế",
+    accessDeniedDesc: "Tài khoản của bạn không có quyền truy cập vào phân hệ này. Vui lòng chuyển sang tài khoản có quyền phù hợp.",
+
     // General Common
     actions: "Thao Tác",
     status: "Trạng Thái",
@@ -184,6 +201,23 @@ export const translations = {
     applyTariffToInventory: "Apply Tariff to Vacant Rooms",
     save: "Save Config",
 
+    // Auth & Roles
+    loginTitle: "PMS Authentication & Role Segregation",
+    loginSubtitle: "Select staff user account or enter credentials to access role-segregated features",
+    quickRoleSwitch: "Quick Role Switcher (1-Click Demo)",
+    customPinLogin: "Username & PIN Login",
+    switchRoleBtn: "Switch Role",
+    logoutBtn: "Log Out",
+    roleAdmin: "System Administrator & GM",
+    roleFrontDesk: "Front Desk Receptionist",
+    roleHousekeeper: "Executive Housekeeper",
+    roleRoomAttendant: "Room Attendant (Maid)",
+    roleSales: "Sales & Revenue Manager",
+    roleNightAudit: "Night Auditor & Duty Mgr",
+    roleAccounting: "Chief Accountant & Finance",
+    accessDenied: "Access Restricted",
+    accessDeniedDesc: "Your logged-in role does not have permission to view this module. Please switch to an authorized account.",
+
     // General Common
     actions: "Actions",
     status: "Status",
@@ -195,3 +229,4 @@ export const translations = {
     languageLabel: "Language",
   }
 };
+

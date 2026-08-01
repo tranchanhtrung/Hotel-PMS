@@ -12,9 +12,11 @@ import { CheckInModal } from "./components/FrontDesk/CheckInModal";
 import { FolioModal } from "./components/FrontDesk/FolioModal";
 import { AiInsightsModal } from "./components/AiAssistant/AiInsightsModal";
 import { SplitTerminalModal } from "./components/MultiTerminal/SplitTerminalModal";
+import { AuthModal } from "./components/AuthModal";
+import { AccessDeniedView } from "./components/AccessDeniedView";
 
 function AppContent() {
-  const { activeView, loading } = usePms();
+  const { activeView, loading, canAccessView } = usePms();
 
   if (loading) {
     return (
@@ -27,18 +29,26 @@ function AppContent() {
     );
   }
 
+  const isViewAllowed = canAccessView(activeView);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col antialiased">
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-        {activeView === "tape_chart" && <TapeChart />}
-        {activeView === "front_desk" && <FrontDeskView />}
-        {activeView === "housekeeping" && <HousekeepingView />}
-        {activeView === "reservations" && <ReservationsView />}
-        {activeView === "reports" && <ReportsView />}
-        {activeView === "settings" && <SettingsView />}
-        {activeView === "night_audit" && <NightAuditView />}
+        {!isViewAllowed ? (
+          <AccessDeniedView />
+        ) : (
+          <>
+            {activeView === "tape_chart" && <TapeChart />}
+            {activeView === "front_desk" && <FrontDeskView />}
+            {activeView === "housekeeping" && <HousekeepingView />}
+            {activeView === "reservations" && <ReservationsView />}
+            {activeView === "reports" && <ReportsView />}
+            {activeView === "settings" && <SettingsView />}
+            {activeView === "night_audit" && <NightAuditView />}
+          </>
+        )}
       </main>
 
       {/* Global Modals */}
@@ -46,6 +56,7 @@ function AppContent() {
       <FolioModal />
       <AiInsightsModal />
       <SplitTerminalModal />
+      <AuthModal />
     </div>
   );
 }

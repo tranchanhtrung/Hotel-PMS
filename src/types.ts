@@ -175,5 +175,26 @@ export interface ServiceRateItem {
   isAvailable: boolean;
 }
 
+export type UserRole =
+  | "admin"
+  | "front_desk"
+  | "housekeeper"
+  | "room_attendant"
+  | "sales"
+  | "night_audit"
+  | "accounting";
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  name: string;
+  role: UserRole;
+  title: string;
+  department: string;
+  pin: string;
+  avatar: string;
+  allowedViews: ActiveView[];
+}
+
 export type TerminalMode = "front_desk" | "housekeeping" | "manager" | "split_terminal";
 export type ActiveView = "tape_chart" | "front_desk" | "housekeeping" | "reservations" | "night_audit" | "reports" | "settings";
