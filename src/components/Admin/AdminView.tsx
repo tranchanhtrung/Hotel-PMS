@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePms } from "../../context/PmsContext";
 import {
   Building2,
@@ -61,6 +61,12 @@ export const AdminView: React.FC = () => {
   // --- HOTEL PROFILE FORM STATE ---
   const [profileForm, setProfileForm] = useState<HotelInfo>({ ...hotelInfo });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (hotelInfo) {
+      setProfileForm({ ...hotelInfo });
+    }
+  }, [hotelInfo]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -493,27 +499,45 @@ export const AdminView: React.FC = () => {
               </select>
             </div>
 
-            {/* Tax Rate & Service Charge */}
+            {/* VAT Tax Rate (%) */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <Percent className="w-3.5 h-3.5 text-sky-400" />
-                <span>{language === "vi" ? "Thuế VAT (%) & Phụ Phí Dịch Vụ (%)" : "VAT Tax Rate (%) & Service Fee (%)"}</span>
+                <span>{language === "vi" ? "Thuế Giá Trị Gia Tăng - VAT (%)" : "Value Added Tax - VAT Rate (%)"}</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
                 <input
                   type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
                   value={profileForm.taxRate}
                   onChange={e => setProfileForm({ ...profileForm, taxRate: Number(e.target.value) })}
-                  placeholder="VAT %"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
+                  placeholder="10"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-amber-500 pr-8"
                 />
+                <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+              </div>
+            </div>
+
+            {/* Service Charge Rate (%) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <Percent className="w-3.5 h-3.5 text-amber-400" />
+                <span>{language === "vi" ? "Phụ Phí Dịch Vụ Khách Sạn (%)" : "Hotel Service Charge Rate (%)"}</span>
+              </label>
+              <div className="relative">
                 <input
                   type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
                   value={profileForm.serviceCharge}
                   onChange={e => setProfileForm({ ...profileForm, serviceCharge: Number(e.target.value) })}
-                  placeholder="Service %"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
+                  placeholder="5"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-amber-500 pr-8"
                 />
+                <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
               </div>
             </div>
 

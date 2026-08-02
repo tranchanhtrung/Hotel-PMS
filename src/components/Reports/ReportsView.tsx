@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { ReportSubmission } from "../../types";
 import { formatVND } from "../../utils/formatters";
+import { calculateItemLine } from "../../utils/billing";
 
 export const ReportsView: React.FC = () => {
   const {
@@ -40,7 +41,8 @@ export const ReportsView: React.FC = () => {
     reservations,
     folios,
     submittedReports,
-    submitReportToDept
+    submitReportToDept,
+    hotelInfo
   } = usePms();
 
   // Active Report Category Sub-Tab
@@ -141,6 +143,9 @@ export const ReportsView: React.FC = () => {
       }
     >();
 
+    const svcRate = hotelInfo?.serviceCharge ?? 5;
+    const taxRate = hotelInfo?.taxRate ?? 10;
+
     // First populate from folios
     folios.forEach((f) => {
       const room = rooms.find((r) => r.number === f.roomNumber);
@@ -152,9 +157,15 @@ export const ReportsView: React.FC = () => {
       let ext = 0;
 
       f.items.forEach((item) => {
-        if (item.category === "room") rmRev += item.amount;
-        else if (item.category === "tax") tx += item.amount;
-        else ext += item.amount;
+        const calc = calculateItemLine(item.amount, item.category, svcRate, taxRate);
+        if (item.category === "room") {
+          rmRev += calc.itemBase;
+        } else if (item.category === "tax") {
+          tx += calc.itemBase;
+        } else {
+          ext += calc.itemBase;
+        }
+        tx += calc.serviceChargeAmount + calc.vatAmount;
       });
 
       const totalSales = rmRev + tx + ext;
@@ -198,20 +209,21 @@ export const ReportsView: React.FC = () => {
     // Include occupied rooms if they don't have explicit folios yet
     rooms.forEach((r) => {
       if (r.status.startsWith("occupied") && !map.has(r.number)) {
-        const roomTax = Math.round(r.rate * 0.05 * 100) / 100;
+        const calc = calculateItemLine(r.rate, "room", svcRate, taxRate);
+        const totalTaxAndSvc = calc.serviceChargeAmount + calc.vatAmount;
         map.set(r.number, {
           roomNumber: r.number,
           roomTypeName: r.typeName,
           roomStatus: r.status,
           guestName: r.guestName || "In-House Guest",
           folioIds: [],
-          itemsCount: 2,
+          itemsCount: 1,
           roomRevenue: r.rate,
-          taxes: roomTax,
+          taxes: totalTaxAndSvc,
           extras: 0,
-          totalSales: r.rate + roomTax,
+          totalSales: calc.lineTotal,
           totalPaid: 0,
-          balance: r.rate + roomTax,
+          balance: calc.lineTotal,
           items: [
             {
               id: `item-auto-${r.id}`,
@@ -219,13 +231,6 @@ export const ReportsView: React.FC = () => {
               description: `Room Charge - ${r.typeName}`,
               amount: r.rate,
               category: "room"
-            },
-            {
-              id: `item-tax-auto-${r.id}`,
-              date: businessDate,
-              description: "City Occupancy Tax (5%)",
-              amount: roomTax,
-              category: "tax"
             }
           ],
           payments: []
@@ -483,11 +488,11 @@ export const ReportsView: React.FC = () => {
 
             <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl shadow">
               <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-                <span>City Occupancy Tax</span>
+                <span>Service Charge & VAT</span>
                 <PieChart className="w-4 h-4 text-sky-400" />
               </div>
               <div className="text-2xl font-bold font-mono text-sky-300">{formatVND(totalTaxes)}</div>
-              <span className="text-[10px] text-slate-500">5% Municipal room tax</span>
+              <span className="text-[10px] text-slate-500">Combined Service Charge & VAT</span>
             </div>
 
             <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl shadow">
@@ -1368,7 +1373,7 @@ export const ReportsView: React.FC = () => {
                       <td className="p-1.5 border text-right">${printingReport.summaryData.roomRevenue}</td>
                     </tr>
                     <tr>
-                      <td className="p-1.5 border">City Occupancy Tax (5%)</td>
+                      <td className="p-1.5 border">Service Charge & VAT Tax</td>
                       <td className="p-1.5 border text-right">${printingReport.summaryData.taxes}</td>
                     </tr>
                     <tr>

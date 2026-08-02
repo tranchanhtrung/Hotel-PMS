@@ -290,11 +290,9 @@ let foliosData = [
     guestName: "Alexander Wright",
     roomNumber: "105",
     items: [
-      { id: "item-1", date: "2026-07-29", description: "Room Charge - Std Single", amount: 450, category: "room" },
-      { id: "item-2", date: "2026-07-29", description: "City Occupancy Tax (5%)", amount: 22.5, category: "tax" },
-      { id: "item-3", date: "2026-07-29", description: "Minibar - Bottled Mineral Water x2", amount: 40, category: "minibar" },
-      { id: "item-4", date: "2026-07-30", description: "Room Charge - Std Single", amount: 450, category: "room" },
-      { id: "item-5", date: "2026-07-30", description: "City Occupancy Tax (5%)", amount: 22.5, category: "tax" }
+      { id: "item-1", date: "2026-07-29", description: "Room Charge - Std Single", unitPrice: 450, quantity: 1, amount: 450, category: "room" },
+      { id: "item-3", date: "2026-07-29", description: "Minibar - Bottled Mineral Water", unitPrice: 20, quantity: 2, amount: 40, category: "minibar" },
+      { id: "item-4", date: "2026-07-30", description: "Room Charge - Std Single", unitPrice: 450, quantity: 1, amount: 450, category: "room" }
     ],
     payments: [
       { id: "pay-1", date: "2026-07-29", description: "Credit Card Payment (Initial)", amount: 985, method: "Credit Card" },
@@ -307,9 +305,8 @@ let foliosData = [
     guestName: "Elena Rostova",
     roomNumber: "210",
     items: [
-      { id: "item-10", date: "2026-07-30", description: "Room Charge - Std Double", amount: 600, category: "room" },
-      { id: "item-11", date: "2026-07-30", description: "City Occupancy Tax (5%)", amount: 30, category: "tax" },
-      { id: "item-12", date: "2026-07-30", description: "Express Laundry Service", amount: 120, category: "laundry" }
+      { id: "item-10", date: "2026-07-30", description: "Room Charge - Std Double", unitPrice: 600, quantity: 1, amount: 600, category: "room" },
+      { id: "item-12", date: "2026-07-30", description: "Express Laundry Service", unitPrice: 120, quantity: 1, amount: 120, category: "laundry" }
     ],
     payments: [
       { id: "pay-10", date: "2026-07-30", description: "Cash Payment", amount: 750, method: "Cash" }
@@ -1057,8 +1054,7 @@ app.post("/api/pms/checkin", (req, res) => {
       guestName: targetReservation.guestName,
       roomNumber: room.number,
       items: [
-        { id: `item-${Date.now()}-1`, date: businessDate, description: `Room Charge (${numNights} night${numNights > 1 ? 's' : ''}) - ${room.typeName}`, amount: totalRate, category: "room" as const },
-        { id: `item-${Date.now()}-2`, date: businessDate, description: "City Occupancy Tax (5%)", amount: tax, category: "tax" as const }
+        { id: `item-${Date.now()}-1`, date: businessDate, description: `Room Charge (${numNights} night${numNights > 1 ? 's' : ''}) - ${room.typeName}`, unitPrice: room.rate, quantity: numNights, amount: totalRate, category: "room" as const }
       ],
       payments: [
         { id: `pay-${Date.now()}`, date: businessDate, description: `Deposit / Payment (${paymentMethod || 'Credit Card'})`, amount: Number(depositAmount) || 50, method: (paymentMethod as any) || "Credit Card" }
@@ -1308,7 +1304,7 @@ app.post("/api/pms/housekeepers/delete", (req, res) => {
 
 // --- Add Extra POS Charge to Room Folio ---
 app.post("/api/pms/folio/add", (req, res) => {
-  const { reservationId, description, amount, category, paymentMethod } = req.body;
+  const { reservationId, description, amount, unitPrice, quantity, category, paymentMethod } = req.body;
 
   let folio = foliosData.find(f => f.reservationId === reservationId);
   if (!folio) {
@@ -1334,11 +1330,19 @@ app.post("/api/pms/folio/add", (req, res) => {
       method: paymentMethod || "Cash"
     });
   } else {
+    const qty = Number(quantity) && Number(quantity) > 0 ? Number(quantity) : 1;
+    const uPrice = unitPrice !== undefined && unitPrice !== null && !isNaN(Number(unitPrice))
+      ? Number(unitPrice)
+      : (Number(amount) ? Number(amount) / qty : 0);
+    const calculatedBase = uPrice * qty;
+
     folio.items.push({
       id: `item-${Date.now()}`,
       date: businessDate,
       description: description || "Extra Charge",
-      amount: Number(amount),
+      unitPrice: uPrice,
+      quantity: qty,
+      amount: calculatedBase,
       category: category || "extra"
     });
   }
@@ -1537,17 +1541,12 @@ app.post("/api/pms/night-audit", (req, res) => {
           id: `item-na-${Date.now()}-${resv.id}`,
           date: businessDate,
           description: `Night Audit Room Charge - ${room.typeName}`,
+          unitPrice: room.rate,
+          quantity: 1,
           amount: room.rate,
           category: "room"
         });
-        folio.items.push({
-          id: `tax-na-${Date.now()}-${resv.id}`,
-          date: businessDate,
-          description: `City Occupancy Tax (5%)`,
-          amount: room.rate * 0.05,
-          category: "tax"
-        });
-        totalPosted += room.rate + (room.rate * 0.05);
+        totalPosted += room.rate;
         postedCount++;
       }
     }

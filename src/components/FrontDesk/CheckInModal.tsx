@@ -3,6 +3,7 @@ import { usePms } from "../../context/PmsContext";
 import { UserCheck, Shield, KeyRound, CreditCard, Hotel, DollarSign, Calendar, Globe, MapPin, Clock, FileText, UserPlus, Trash2, Users } from "lucide-react";
 import { GuestProfile } from "../../types";
 import { formatVND } from "../../utils/formatters";
+import { calculateItemLine } from "../../utils/billing";
 
 export const CheckInModal: React.FC = () => {
   const {
@@ -14,7 +15,8 @@ export const CheckInModal: React.FC = () => {
     setSelectedReservationForCheckIn,
     rooms,
     checkIn,
-    businessDate
+    businessDate,
+    hotelInfo
   } = usePms();
 
   // Multi-guest list state (up to 3 guests)
@@ -192,11 +194,14 @@ export const CheckInModal: React.FC = () => {
 
   if (!isCheckInModalOpen) return null;
 
+  const svcRate = hotelInfo?.serviceCharge ?? 5;
+  const taxRate = hotelInfo?.taxRate ?? 10;
+
   const selectedRoom = rooms.find((r) => r.id === roomId);
   const roomRate = selectedRoom ? selectedRoom.rate : 50;
   const roomTotal = roomRate * nights;
-  const tax = roomTotal * 0.05;
-  const grandTotal = roomTotal + tax;
+  const lineCalc = calculateItemLine(roomTotal, "room", svcRate, taxRate);
+  const grandTotal = lineCalc.lineTotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -556,14 +561,18 @@ export const CheckInModal: React.FC = () => {
           </div>
 
           {/* Folio Billing Summary */}
-          <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-300">{t("roomRateNights")} ({nights} đêm @ {formatVND(roomRate)}/đêm)</span>
-              <span className="font-mono font-semibold text-slate-100">{formatVND(roomTotal)}</span>
+          <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl space-y-2 text-xs">
+            <div className="flex justify-between items-center text-slate-300">
+              <span>{formatVND(roomRate)} x {nights} {language === "vi" ? "đêm" : "nights"} = {formatVND(lineCalc.itemBase)} (Unit Price x Qty = Base)</span>
+              <span className="font-mono font-semibold text-slate-100">{formatVND(lineCalc.itemBase)}</span>
             </div>
-            <div className="flex justify-between items-center text-slate-400 text-xs">
-              <span>{t("taxCityFee")}</span>
-              <span className="font-mono">{formatVND(tax)}</span>
+            <div className="flex justify-between items-center text-slate-400">
+              <span>Phụ phí dịch vụ ({svcRate}%)</span>
+              <span className="font-mono text-amber-400">{formatVND(lineCalc.serviceChargeAmount)}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-400">
+              <span>Thuế VAT ({taxRate}%) - [(Phòng + Service) x VAT%]</span>
+              <span className="font-mono text-sky-400">{formatVND(lineCalc.vatAmount)}</span>
             </div>
             <div className="border-t border-amber-500/20 pt-2 flex justify-between items-center text-sm font-bold text-amber-300">
               <span>{t("totalAmountToPay")}</span>

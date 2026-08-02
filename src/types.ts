@@ -79,6 +79,8 @@ export interface FolioItem {
   id: string;
   date: string;
   description: string;
+  unitPrice?: number;
+  quantity?: number;
   amount: number;
   category: "room" | "minibar" | "laundry" | "extra" | "tax" | "damage";
 }

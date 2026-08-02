@@ -13,6 +13,7 @@ import {
   Shirt
 } from "lucide-react";
 import { formatVND } from "../../utils/formatters";
+import { calculateItemLine, calculateFolioTotals } from "../../utils/billing";
 
 export const FolioModal: React.FC = () => {
   const {
@@ -24,8 +25,12 @@ export const FolioModal: React.FC = () => {
     addFolioCharge,
     checkOut,
     businessDate,
-    language
+    language,
+    hotelInfo
   } = usePms();
+
+  const svcRate = hotelInfo?.serviceCharge ?? 5;
+  const taxRate = hotelInfo?.taxRate ?? 10;
 
   const getLocalizedServiceName = (name: string) => {
     if (language !== "en") return name;
@@ -49,8 +54,15 @@ export const FolioModal: React.FC = () => {
     return name;
   };
 
-  const [extraDesc, setExtraDesc] = useState("Minibar - Bottled Water x2");
-  const [extraAmount, setExtraAmount] = useState(4.00);
+  const formatCleanDescription = (name: string) => {
+    // Remove trailing quantity expressions like " x2", " x 2", " x3", etc.
+    const cleaned = name.replace(/\s+x\s*\d+$/i, "").trim();
+    return getLocalizedServiceName(cleaned);
+  };
+
+  const [extraDesc, setExtraDesc] = useState("Nước suối Aquafina 500ml");
+  const [extraUnitPrice, setExtraUnitPrice] = useState(20);
+  const [extraQuantity, setExtraQuantity] = useState(2);
   const [extraCat, setExtraCat] = useState<"minibar" | "laundry" | "extra" | "damage">("minibar");
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Credit Card" | "Bank Transfer">("Credit Card");
@@ -69,21 +81,30 @@ export const FolioModal: React.FC = () => {
     payments: []
   };
 
-  const totalCharges = folio.items.reduce((sum, item) => sum + item.amount, 0);
-  const totalPaid = folio.payments.reduce((sum, pay) => sum + pay.amount, 0);
-  const balanceDue = totalCharges - totalPaid; // > 0: Guest owes money; < 0: Refund owed to guest
+  const {
+    totalItemBase,
+    totalServiceCharge,
+    totalVat,
+    totalCharges,
+    totalPaid,
+    balanceDue
+  } = calculateFolioTotals(folio.items, folio.payments, svcRate, taxRate);
 
   const handleAddCharge = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!extraAmount || extraAmount <= 0) return;
+    if (!extraUnitPrice || extraUnitPrice <= 0 || !extraQuantity || extraQuantity <= 0) return;
+    const calculatedBase = extraUnitPrice * extraQuantity;
     await addFolioCharge({
       reservationId: activeFolioReservation.id,
       description: extraDesc,
-      amount: extraAmount,
+      unitPrice: extraUnitPrice,
+      quantity: extraQuantity,
+      amount: calculatedBase,
       category: extraCat
     });
-    setExtraDesc("Minibar - Bottled Water x2");
-    setExtraAmount(4.00);
+    setExtraDesc("Nước suối Aquafina 500ml");
+    setExtraUnitPrice(20);
+    setExtraQuantity(2);
   };
 
   const handleAddPayment = async (e: React.FormEvent) => {
@@ -151,7 +172,7 @@ export const FolioModal: React.FC = () => {
             <div className="text-center border-b pb-3">
               <h2 className="font-bold text-base">GRAND STAY HOTEL</h2>
               <p className="text-[10px] text-slate-600">Economy Hotel Management System</p>
-              <p className="text-[10px] text-slate-600">Date: {businessDate}</p>
+              <p className="text-[10px] text-slate-600">Date: {businessDate} | <strong>Currency: VNĐ</strong></p>
             </div>
 
             <div className="flex justify-between text-[11px] border-b pb-2">
@@ -170,41 +191,57 @@ export const FolioModal: React.FC = () => {
               </div>
             </div>
 
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse my-2">
               <thead>
-                <tr className="border-b text-[10px] uppercase">
-                  <th className="py-1">Date</th>
-                  <th className="py-1">Description</th>
-                  <th className="py-1 text-right">Amount</th>
+                <tr className="border-b border-slate-300 text-[10px] uppercase font-bold text-slate-700">
+                  <th className="py-1.5 pr-2 w-[12%]">Date</th>
+                  <th className="py-1.5 px-2 w-[28%]">Description</th>
+                  <th className="py-1.5 px-1 text-center w-[6%]">Qty</th>
+                  <th className="py-1.5 px-2 text-right w-[14%]">Unit Price</th>
+                  <th className="py-1.5 px-2 text-right w-[14%]">Base</th>
+                  <th className="py-1.5 px-1.5 text-right w-[8%]">Svc ({svcRate}%)</th>
+                  <th className="py-1.5 px-1.5 text-right w-[8%]">VAT ({taxRate}%)</th>
+                  <th className="py-1.5 pl-2 text-right w-[10%] font-bold">Line Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
-                {folio.items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="py-1">{item.date}</td>
-                    <td className="py-1">{item.description}</td>
-                    <td className="py-1 text-right">{formatVND(item.amount)}</td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-200 text-[11px]">
+                {folio.items.map((item) => {
+                  const calc = calculateItemLine(item.amount, item.category, svcRate, taxRate, item.unitPrice, item.quantity);
+                  return (
+                    <tr key={item.id}>
+                      <td className="py-1.5 pr-2 font-mono whitespace-nowrap">{item.date}</td>
+                      <td className="py-1.5 px-2">{formatCleanDescription(item.description)}</td>
+                      <td className="py-1.5 px-1 text-center font-mono">{calc.quantity}</td>
+                      <td className="py-1.5 px-2 text-right font-mono whitespace-nowrap">{formatVND(calc.unitPrice, false)}</td>
+                      <td className="py-1.5 px-2 text-right font-mono font-normal whitespace-nowrap">{formatVND(calc.itemBase, false)}</td>
+                      <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 whitespace-nowrap">{formatVND(calc.serviceChargeAmount, false)}</td>
+                      <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 whitespace-nowrap">{formatVND(calc.vatAmount, false)}</td>
+                      <td className="py-1.5 pl-2 text-right font-mono font-bold whitespace-nowrap">{formatVND(calc.lineTotal, false)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
             <div className="border-t pt-2 space-y-1 text-right">
-              <p>Subtotal Charges: <strong>{formatVND(totalCharges)}</strong></p>
-              <p>Total Paid / Deposited: <strong>{formatVND(totalPaid)}</strong></p>
+              <p>Total Items Base: <strong>{formatVND(totalItemBase, false)}</strong></p>
+              <p>Service Charge ({svcRate}%): <strong>{formatVND(totalServiceCharge, false)}</strong></p>
+              <p>VAT Tax ({taxRate}%): <strong>{formatVND(totalVat, false)}</strong></p>
+              <p className="border-t pt-1 font-bold">Subtotal Charges (Line Total): <strong>{formatVND(totalCharges, false)}</strong></p>
+              <p>Total Paid / Deposited: <strong>{formatVND(totalPaid, false)}</strong></p>
               {balanceDue > 0 && (
                 <p className="text-sm font-bold border-t pt-1 text-rose-700">
-                  Balance Due: {formatVND(balanceDue)}
+                  Balance Due: {formatVND(balanceDue, false)}
                 </p>
               )}
               {balanceDue < 0 && (
                 <p className="text-sm font-bold border-t pt-1 text-emerald-700">
-                  Refund Due to Guest: {formatVND(Math.abs(balanceDue))}
+                  Refund Due to Guest: {formatVND(Math.abs(balanceDue), false)}
                 </p>
               )}
               {balanceDue === 0 && (
                 <p className="text-sm font-bold border-t pt-1 text-emerald-700">
-                  Balance: 0.000 VNĐ (Fully Settled)
+                  Balance: 0.000 (Fully Settled)
                 </p>
               )}
             </div>
@@ -233,19 +270,53 @@ export const FolioModal: React.FC = () => {
             {/* Folio Items Table */}
             <div className="bg-slate-800/40 rounded-xl border border-slate-800 overflow-hidden text-xs">
               <div className="p-3 bg-slate-800/80 font-semibold text-slate-300 flex justify-between items-center">
-                <span>{language === "en" ? "Itemized Charges & Services" : "Chi Tiết Phí & Dịch Vụ"}</span>
-                <span className="text-amber-400 font-mono">{formatVND(totalCharges)}</span>
+                <span>{language === "en" ? "Itemized Charges & Tax Formula Breakdown" : "Chi Tiết Phí, Service Charge & VAT (Line Breakdown)"}</span>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 mr-1.5">{language === "vi" ? "Tổng cộng:" : "Total:"}</span>
+                  <span className="text-amber-400 font-mono font-bold text-sm">{formatVND(totalCharges)}</span>
+                </div>
               </div>
-              <div className="max-h-48 overflow-y-auto divide-y divide-slate-800/60">
-                {folio.items.map((item) => (
-                  <div key={item.id} className="p-2.5 flex justify-between items-center text-slate-300 hover:bg-slate-800/30">
-                    <div>
-                      <div className="font-medium text-slate-100">{getLocalizedServiceName(item.description)}</div>
-                      <span className="text-[10px] text-slate-500 font-mono">{item.date} • {item.category}</span>
+              <div className="max-h-56 overflow-y-auto divide-y divide-slate-800/60">
+                {folio.items.map((item) => {
+                  const calc = calculateItemLine(item.amount, item.category, svcRate, taxRate, item.unitPrice, item.quantity);
+                  return (
+                    <div key={item.id} className="p-3 text-slate-300 hover:bg-slate-800/30">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold text-slate-100">{formatCleanDescription(item.description)}</div>
+                          <div className="text-[10px] text-amber-400/90 font-mono">
+                            {formatVND(calc.unitPrice)} x {calc.quantity} = {formatVND(calc.itemBase)} Base
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">{item.date} • {item.category}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-mono font-bold text-amber-300 text-sm">{formatVND(calc.lineTotal)}</div>
+                          <span className="text-[10px] text-slate-400">{language === "vi" ? "Thành tiền" : "Line Total"}</span>
+                        </div>
+                      </div>
+
+                      {/* Line Formula Calculation Card */}
+                      <div className="mt-2 bg-slate-900/80 p-2 rounded-lg border border-slate-800 text-[11px] grid grid-cols-4 gap-2 text-center font-mono">
+                        <div>
+                          <span className="text-[9px] text-slate-400 block">{language === "vi" ? "Đơn Giá x SL = Gốc" : "Unit Price x Qty = Base"}</span>
+                          <span className="text-slate-200">{formatVND(calc.unitPrice)} x {calc.quantity} = <span className="font-normal text-amber-300">{formatVND(calc.itemBase)}</span></span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 block">Service ({svcRate}%)</span>
+                          <span className="text-amber-400">{formatVND(calc.serviceChargeAmount)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 block">VAT ({taxRate}%)</span>
+                          <span className="text-sky-400">{formatVND(calc.vatAmount)}</span>
+                        </div>
+                        <div className="bg-amber-500/10 rounded border border-amber-500/20">
+                          <span className="text-[9px] text-amber-400 block font-sans font-bold">{language === "vi" ? "Thành Tiền" : "Line Total"}</span>
+                          <span className="text-amber-300 font-bold">{formatVND(calc.lineTotal)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="font-mono font-semibold text-slate-100">{formatVND(item.amount)}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -277,7 +348,8 @@ export const FolioModal: React.FC = () => {
                         type="button"
                         onClick={() => {
                           setExtraDesc(localizedName);
-                          setExtraAmount(srv.rate);
+                          setExtraUnitPrice(srv.rate);
+                          setExtraQuantity(1);
                           setExtraCat(catKey);
                         }}
                         className="bg-slate-800 hover:bg-amber-500/20 hover:border-amber-500/40 px-2 py-1 rounded border border-slate-700/80 text-[11px] text-slate-200 transition flex items-center gap-1"
@@ -293,28 +365,28 @@ export const FolioModal: React.FC = () => {
                   <>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc(language === "en" ? "Bottled Water x2" : "Nước suối đóng chai x2"); setExtraAmount(40); setExtraCat("minibar"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Bottled Water" : "Nước suối đóng chai"); setExtraUnitPrice(20); setExtraQuantity(2); setExtraCat("minibar"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
-                      🥤 {language === "en" ? "Bottled Water (40.000đ)" : "Nước Suối (40.000đ)"}
+                      🥤 {language === "en" ? "Bottled Water (20.000đ)" : "Nước Suối (20.000đ)"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc(language === "en" ? "Express Laundry Service" : "Dịch vụ giặt ủi lấy liền"); setExtraAmount(100); setExtraCat("laundry"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Express Laundry Service" : "Dịch vụ giặt ủi lấy liền"); setExtraUnitPrice(50); setExtraQuantity(2); setExtraCat("laundry"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
-                      👕 {language === "en" ? "Laundry (100.000đ)" : "Giặt ủi (100.000đ)"}
+                      👕 {language === "en" ? "Laundry (50.000đ)" : "Giặt ủi (50.000đ)"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc(language === "en" ? "Late Checkout Fee (2 hrs)" : "Phí Trả Phòng Trễ (2 giờ)"); setExtraAmount(150); setExtraCat("extra"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Late Checkout Fee (2 hrs)" : "Phí Trả Phòng Trễ (2 giờ)"); setExtraUnitPrice(75); setExtraQuantity(2); setExtraCat("extra"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
-                      ⏰ Late Checkout (150.000đ)
+                      ⏰ {language === "en" ? "Late Checkout (75.000đ)" : "Late Checkout (75.000đ)"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setExtraDesc(language === "en" ? "Extra Bed & Towel Set" : "Thêm Giường Phụ & Bộ Khăn"); setExtraAmount(120); setExtraCat("extra"); }}
+                      onClick={() => { setExtraDesc(language === "en" ? "Extra Bed & Towel Set" : "Thêm Giường Phụ & Bộ Khăn"); setExtraUnitPrice(120); setExtraQuantity(1); setExtraCat("extra"); }}
                       className="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-[11px] text-slate-300"
                     >
                       🛏️ {language === "en" ? "Extra Bed / Towels (120.000đ)" : "Thêm Giường/Khăn (120.000đ)"}
@@ -323,27 +395,47 @@ export const FolioModal: React.FC = () => {
                 )}
               </div>
 
-              <form onSubmit={handleAddCharge} className="flex gap-2 text-xs">
-                <input
-                  type="text"
-                  placeholder={language === "en" ? "Charge description..." : "Mô tả khoản phí..."}
-                  value={extraDesc}
-                  onChange={(e) => setExtraDesc(e.target.value)}
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-amber-500"
-                />
-                <input
-                  type="number"
-                  placeholder={language === "en" ? "Amount (1.000đ)" : "Số tiền (1.000đ)"}
-                  value={extraAmount}
-                  onChange={(e) => setExtraAmount(Number(e.target.value))}
-                  className="w-32 bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-100 font-mono focus:outline-none focus:border-amber-500"
-                />
-                <button
-                  type="submit"
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-2 rounded-lg transition"
-                >
-                  {language === "en" ? "+ Add Charge" : "+ Thêm Phí"}
-                </button>
+              <form onSubmit={handleAddCharge} className="space-y-2 text-xs">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={language === "en" ? "Charge description..." : "Mô tả khoản phí..."}
+                    value={extraDesc}
+                    onChange={(e) => setExtraDesc(e.target.value)}
+                    className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-100 focus:outline-none focus:border-amber-500"
+                  />
+                  <div className="flex items-center gap-1 w-32 bg-slate-800 border border-slate-700 rounded-lg px-2">
+                    <span className="text-slate-400 text-[10px] shrink-0">Đơn giá:</span>
+                    <input
+                      type="number"
+                      placeholder="20"
+                      value={extraUnitPrice || ""}
+                      onChange={(e) => setExtraUnitPrice(Number(e.target.value))}
+                      className="w-full bg-transparent text-slate-100 font-mono focus:outline-none text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 w-24 bg-slate-800 border border-slate-700 rounded-lg px-2">
+                    <span className="text-slate-400 text-[10px] shrink-0">SL:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="1"
+                      value={extraQuantity || ""}
+                      onChange={(e) => setExtraQuantity(Number(e.target.value))}
+                      className="w-full bg-transparent text-slate-100 font-mono focus:outline-none text-xs"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-2 rounded-lg transition whitespace-nowrap"
+                  >
+                    {language === "en" ? "+ Add Charge" : "+ Thêm Phí"}
+                  </button>
+                </div>
+                <div className="text-[11px] text-slate-400 flex justify-between items-center px-1 font-mono">
+                  <span>{formatVND(extraUnitPrice)} x {extraQuantity} = <strong className="text-amber-300">{formatVND(extraUnitPrice * extraQuantity)} (Base)</strong></span>
+                  <span>+ Svc({svcRate}%) + VAT({taxRate}%) = <strong className="text-amber-400">{formatVND(calculateItemLine(extraUnitPrice * extraQuantity, extraCat, svcRate, taxRate, extraUnitPrice, extraQuantity).lineTotal)} (Thành tiền)</strong></span>
+                </div>
               </form>
             </div>
 

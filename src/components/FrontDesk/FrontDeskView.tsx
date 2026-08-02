@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Reservation } from "../../types";
 import { formatVND } from "../../utils/formatters";
+import { calculateFolioTotals } from "../../utils/billing";
 
 export const FrontDeskView: React.FC = () => {
   const {
@@ -26,7 +27,8 @@ export const FrontDeskView: React.FC = () => {
     setSelectedReservationForCheckIn,
     setIsFolioModalOpen,
     setActiveFolioReservation,
-    checkOut
+    checkOut,
+    hotelInfo
   } = usePms();
 
   const [activeTab, setActiveTab] = useState<"in_house" | "arrivals" | "departures">("in_house");
@@ -62,9 +64,13 @@ export const FrontDeskView: React.FC = () => {
   const getFolioBalance = (resId: string) => {
     const folio = folios.find((f) => f.reservationId === resId);
     if (!folio) return 0;
-    const totalCharges = folio.items.reduce((sum, item) => sum + item.amount, 0);
-    const totalPaid = folio.payments.reduce((sum, pay) => sum + pay.amount, 0);
-    return totalCharges - totalPaid;
+    const { balanceDue } = calculateFolioTotals(
+      folio.items,
+      folio.payments,
+      hotelInfo?.serviceCharge ?? 5,
+      hotelInfo?.taxRate ?? 10
+    );
+    return balanceDue;
   };
 
   const totalPendingDue = inHouseList.reduce((acc, item) => {
