@@ -17,7 +17,11 @@ import {
   Sliders,
   Globe,
   Lock,
-  User
+  User,
+  ShieldCheck,
+  Building2,
+  Sun,
+  Moon
 } from "lucide-react";
 import { ActiveView, TerminalMode } from "../types";
 
@@ -25,6 +29,8 @@ export const Header: React.FC = () => {
   const {
     language,
     setLanguage,
+    theme,
+    toggleTheme,
     t,
     businessDate,
     stats,
@@ -54,6 +60,7 @@ export const Header: React.FC = () => {
     { id: "reservations", labelKey: "bookingsOta", defaultLabel: "Bookings & OTA", icon: <CalendarDays className="w-4 h-4" /> },
     { id: "reports", labelKey: "reports", defaultLabel: "Reports & Audit", icon: <FileText className="w-4 h-4" /> },
     { id: "settings", labelKey: "settings", defaultLabel: "Room & Period Rates", icon: <Sliders className="w-4 h-4" /> },
+    { id: "admin", labelKey: "admin", defaultLabel: "Admin Setup", icon: <Building2 className="w-4 h-4" /> },
     { id: "night_audit", labelKey: "nightAudit", defaultLabel: "Night Audit & Logs", icon: <ShieldAlert className="w-4 h-4" /> },
   ];
 
@@ -131,6 +138,26 @@ export const Header: React.FC = () => {
           >
             <Globe className="w-3.5 h-3.5 text-amber-400" />
             <span>{language === "vi" ? "🇻🇳 Tiếng Việt" : "🇬🇧 English"}</span>
+          </button>
+
+          {/* Theme Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            id="btn-theme-toggle"
+            title={language === "vi" ? "Chuyển giao diện sáng/tối" : "Toggle Light/Dark Theme"}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold px-2.5 py-1 rounded-md border border-slate-700 text-xs transition shadow-sm cursor-pointer"
+          >
+            {theme === "light" ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                <span>{t("lightMode")}</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-amber-400" />
+                <span>{t("darkMode")}</span>
+              </>
+            )}
           </button>
 
           {/* Realtime Status Indicator */}

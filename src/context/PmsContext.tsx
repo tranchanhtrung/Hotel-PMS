@@ -13,7 +13,8 @@ import {
   Housekeeper,
   ReportSubmission,
   RatePeriod,
-  ServiceRateItem
+  ServiceRateItem,
+  HotelInfo
 } from "../types";
 
 import { Language, translations } from "../i18n/translations";
@@ -28,7 +29,7 @@ export const DEFAULT_USER_ACCOUNTS: UserAccount[] = [
     department: "Executive Office",
     pin: "1234",
     avatar: "👑",
-    allowedViews: ["tape_chart", "front_desk", "housekeeping", "reservations", "reports", "settings", "night_audit"]
+    allowedViews: ["tape_chart", "front_desk", "housekeeping", "reservations", "reports", "settings", "admin", "night_audit"]
   },
   {
     id: "usr_frontdesk",
@@ -101,7 +102,11 @@ export const DEFAULT_USER_ACCOUNTS: UserAccount[] = [
 interface PmsContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
+  theme: "dark" | "light";
+  setTheme: (theme: "dark" | "light") => void;
+  toggleTheme: () => void;
   t: (key: keyof typeof translations.vi) => string;
+  hotelInfo: HotelInfo;
   businessDate: string;
   roomTypes: RoomType[];
   ratePeriods: RatePeriod[];
@@ -131,6 +136,8 @@ interface PmsContextType {
   loginWithCredentials: (username: string, pin: string) => boolean;
   logout: () => void;
   canAccessView: (view: ActiveView) => boolean;
+  saveUserAccount: (user: Partial<UserAccount>) => boolean;
+  deleteUserAccount: (id: string) => boolean;
 
   // Modals
   isCheckInModalOpen: boolean;
@@ -148,6 +155,10 @@ interface PmsContextType {
 
   // Actions
   fetchState: () => Promise<void>;
+  updateHotelInfo: (info: Partial<HotelInfo>) => Promise<boolean>;
+  deleteRoomType: (id: string) => Promise<boolean>;
+  savePhysicalRoom: (data: any) => Promise<boolean>;
+  deletePhysicalRoom: (id: string) => Promise<boolean>;
   checkIn: (data: any) => Promise<boolean>;
   checkOut: (data: any) => Promise<boolean>;
   updateHousekeeping: (roomId: string, newStatus: string, housekeeper?: string, notes?: string) => Promise<boolean>;
@@ -184,10 +195,47 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem("pms_lang", lang);
   };
 
+  const [theme, setThemeState] = useState<"dark" | "light">(
+    () => (localStorage.getItem("pms_theme") as "dark" | "light") || "dark"
+  );
+
+  useEffect(() => {
+    if (theme === "light") {
+      document.documentElement.classList.add("light");
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.classList.remove("light");
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  }, [theme]);
+
+  const setTheme = (newTheme: "dark" | "light") => {
+    setThemeState(newTheme);
+    localStorage.setItem("pms_theme", newTheme);
+  };
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   const t = (key: keyof typeof translations.vi): string => {
     const dict = translations[language] || translations.vi;
     return dict[key] || translations.vi[key] || key;
   };
+
+  const [hotelInfo, setHotelInfo] = useState<HotelInfo>({
+    name: "Grand Stay Hotel & Suites",
+    address: "123 Vo Van Kiet Boulevard, District 1, Ho Chi Minh City",
+    phone: "+84 28 3822 9999",
+    email: "info@grandstayhotel.vn",
+    starRating: 4,
+    checkInTime: "14:00",
+    checkOutTime: "12:00",
+    currency: "VND",
+    taxRate: 10,
+    serviceCharge: 5,
+    totalRooms: 72
+  });
 
   const [businessDate, setBusinessDate] = useState<string>("2026-07-30");
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
@@ -218,7 +266,52 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
   // Auth & Role Segregation State
-  const [userAccounts] = useState<UserAccount[]>(DEFAULT_USER_ACCOUNTS);
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {
+    const saved = localStorage.getItem("pms_user_accounts");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return DEFAULT_USER_ACCOUNTS;
+  });
+
+  const saveUserAccount = useCallback((accountData: Partial<UserAccount>): boolean => {
+    setUserAccounts(prev => {
+      const existingIdx = prev.findIndex(u => u.id === accountData.id);
+      let next: UserAccount[];
+      if (existingIdx >= 0) {
+        next = [...prev];
+        next[existingIdx] = { ...next[existingIdx], ...accountData } as UserAccount;
+      } else {
+        const newAcc: UserAccount = {
+          id: accountData.id || `usr_${Date.now()}`,
+          username: accountData.username || "staff",
+          name: accountData.name || "New Staff",
+          role: accountData.role || "front_desk",
+          title: accountData.title || "Staff Member",
+          department: accountData.department || "Front Office",
+          pin: accountData.pin || "1234",
+          avatar: accountData.avatar || "👤",
+          allowedViews: accountData.allowedViews || ["tape_chart", "front_desk"]
+        };
+        next = [...prev, newAcc];
+      }
+      localStorage.setItem("pms_user_accounts", JSON.stringify(next));
+      return next;
+    });
+    return true;
+  }, []);
+
+  const deleteUserAccount = useCallback((id: string): boolean => {
+    setUserAccounts(prev => {
+      const next = prev.filter(u => u.id !== id);
+      localStorage.setItem("pms_user_accounts", JSON.stringify(next));
+      return next;
+    });
+    return true;
+  }, []);
   const [currentUser, setCurrentUser] = useState<UserAccount>(() => {
     const saved = localStorage.getItem("pms_user");
     if (saved) {
@@ -290,6 +383,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const res = await fetch("/api/pms/state");
       if (!res.ok) throw new Error("Failed to fetch state");
       const data = await res.json();
+      if (data.hotelInfo) setHotelInfo(data.hotelInfo);
       setBusinessDate(data.businessDate);
       setRoomTypes(data.roomTypes || []);
       setRatePeriods(data.ratePeriods || []);
@@ -561,6 +655,70 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateHotelInfo = async (data: Partial<HotelInfo>) => {
+    try {
+      const res = await fetch("/api/pms/hotel-info/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Update hotel info error", e);
+      return false;
+    }
+  };
+
+  const deleteRoomType = async (id: string) => {
+    try {
+      const res = await fetch("/api/pms/settings/room-types/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Delete room type error", e);
+      return false;
+    }
+  };
+
+  const savePhysicalRoom = async (data: any) => {
+    try {
+      const res = await fetch("/api/pms/admin/rooms/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Save room inventory error", e);
+      return false;
+    }
+  };
+
+  const deletePhysicalRoom = async (id: string) => {
+    try {
+      const res = await fetch("/api/pms/admin/rooms/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) return false;
+      await fetchState();
+      return true;
+    } catch (e) {
+      console.error("Delete room error", e);
+      return false;
+    }
+  };
+
   const saveRoomType = async (data: any) => {
     try {
       const res = await fetch("/api/pms/settings/room-types/save", {
@@ -689,7 +847,11 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         language,
         setLanguage,
+        theme,
+        setTheme,
+        toggleTheme,
         t,
+        hotelInfo,
         businessDate,
         roomTypes,
         ratePeriods,
@@ -717,6 +879,8 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginWithCredentials,
         logout,
         canAccessView,
+        saveUserAccount,
+        deleteUserAccount,
         isCheckInModalOpen,
 
         setIsCheckInModalOpen,
@@ -729,6 +893,10 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAiModalOpen,
         setIsAiModalOpen,
         fetchState,
+        updateHotelInfo,
+        deleteRoomType,
+        savePhysicalRoom,
+        deletePhysicalRoom,
         checkIn,
         checkOut,
         updateHousekeeping,

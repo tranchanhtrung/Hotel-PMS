@@ -8,6 +8,7 @@ import { ReservationsView } from "./components/Reservations/ReservationsView";
 import { NightAuditView } from "./components/NightAudit/NightAuditView";
 import { ReportsView } from "./components/Reports/ReportsView";
 import { SettingsView } from "./components/Settings/SettingsView";
+import { AdminView } from "./components/Admin/AdminView";
 import { CheckInModal } from "./components/FrontDesk/CheckInModal";
 import { FolioModal } from "./components/FrontDesk/FolioModal";
 import { AiInsightsModal } from "./components/AiAssistant/AiInsightsModal";
@@ -46,6 +47,7 @@ function AppContent() {
             {activeView === "reservations" && <ReservationsView />}
             {activeView === "reports" && <ReportsView />}
             {activeView === "settings" && <SettingsView />}
+            {activeView === "admin" && <AdminView />}
             {activeView === "night_audit" && <NightAuditView />}
           </>
         )}

@@ -104,6 +104,20 @@ export const translations = {
     accessDenied: "Quyền Truy Cập Bị Hạn Chế",
     accessDeniedDesc: "Tài khoản của bạn không có quyền truy cập vào phân hệ này. Vui lòng chuyển sang tài khoản có quyền phù hợp.",
 
+    // Admin Setup Tab
+    admin: "Cấu Hình Admin",
+    adminPanel: "Quản Trị Hệ Thống & Cấu Hình Khách Sạn",
+    adminSubtitle: "Cấu hình thông tin khách sạn, số lượng phòng, loại phòng, gán phòng và phân quyền tài khoản nhân viên",
+    hotelProfile: "Thông Tin Khách Sạn",
+    roomCategories: "Danh Mục Loại Phòng",
+    roomInventory: "Sơ Đồ & Phân Loại Phòng",
+    userManagement: "Quản Lý Nhân Viên & PIN",
+    permissionMatrix: "Ma Trận Phân Quyền",
+    saveHotelInfo: "Lưu Cấu Hình Khách Sạn",
+    addRoomCategory: "Thêm Loại Phòng Mới",
+    addPhysicalRoom: "Thêm Phòng Vào Sơ Đồ",
+    addUserAccount: "Thêm Nhân Viên Mới",
+
     // General Common
     actions: "Thao Tác",
     status: "Trạng Thái",
@@ -113,6 +127,9 @@ export const translations = {
     guestName: "Tên Khách Hàng",
     searchPlaceholder: "Tìm theo số phòng, tên khách, mã booking...",
     languageLabel: "Ngôn Ngữ",
+    lightMode: "Giao Diện Sáng",
+    darkMode: "Giao Diện Tối",
+    themeToggle: "Chuyển Giao Diện",
   },
 
   en: {
@@ -218,6 +235,20 @@ export const translations = {
     accessDenied: "Access Restricted",
     accessDeniedDesc: "Your logged-in role does not have permission to view this module. Please switch to an authorized account.",
 
+    // Admin Setup Tab
+    admin: "Admin Setup",
+    adminPanel: "Administrator & Property Setup",
+    adminSubtitle: "Configure property profile, total rooms, categories, room assignments, and user permissions",
+    hotelProfile: "Hotel Profile & Setup",
+    roomCategories: "Room Categories",
+    roomInventory: "Room Inventory Assignment",
+    userManagement: "Staff Accounts & Security PINs",
+    permissionMatrix: "Permission Access Matrix",
+    saveHotelInfo: "Save Hotel Profile",
+    addRoomCategory: "Add Room Category",
+    addPhysicalRoom: "Add Physical Room",
+    addUserAccount: "Add Staff User Account",
+
     // General Common
     actions: "Actions",
     status: "Status",
@@ -227,6 +258,9 @@ export const translations = {
     guestName: "Guest Name",
     searchPlaceholder: "Search room #, guest name, reservation code...",
     languageLabel: "Language",
+    lightMode: "Light Theme",
+    darkMode: "Dark Theme",
+    themeToggle: "Toggle Theme",
   }
 };
 

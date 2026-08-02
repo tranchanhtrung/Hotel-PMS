@@ -317,6 +317,21 @@ let foliosData = [
   }
 ];
 
+// Hotel Profile Data
+let hotelInfoData = {
+  name: "Grand Stay Hotel & Suites",
+  address: "123 Vo Van Kiet Boulevard, District 1, Ho Chi Minh City",
+  phone: "+84 28 3822 9999",
+  email: "info@grandstayhotel.vn",
+  starRating: 4,
+  checkInTime: "14:00",
+  checkOutTime: "12:00",
+  currency: "VND",
+  taxRate: 10,
+  serviceCharge: 5,
+  totalRooms: 72
+};
+
 // Audit & Activity Logs
 let auditLogs = [
   { id: "log-1", timestamp: new Date(Date.now() - 7200000).toISOString(), staff: "Front Desk (John)", action: "Check-In", details: "Checked in Elena Rostova to Room 210 with deposit $50" },
@@ -418,6 +433,7 @@ app.get("/api/pms/state", (req, res) => {
 
   res.json({
     businessDate,
+    hotelInfo: hotelInfoData,
     roomTypes: roomTypesData,
     ratePeriods: ratePeriodsData,
     serviceRates: serviceRatesData,
@@ -507,6 +523,138 @@ app.post("/api/pms/settings/room-types/save", (req, res) => {
 
   broadcastUpdate("SETTINGS_ROOM_TYPES_UPDATED", { roomTypes: roomTypesData, ratePeriods: ratePeriodsData, rooms: roomsData, log });
   res.json({ success: true, roomType: updatedRoomType, ratePeriods: ratePeriodsData });
+});
+
+// --- SETTINGS: Delete Room Type ---
+app.post("/api/pms/settings/room-types/delete", (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "Room type ID is required" });
+
+  const deletedType = roomTypesData.find(t => t.id === id);
+  roomTypesData = roomTypesData.filter(t => t.id !== id);
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Hotel Administrator",
+    action: "Room Category Deleted",
+    details: `Deleted room category '${deletedType?.name || id}'`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("ROOM_TYPE_DELETED", { id, roomTypes: roomTypesData, log });
+  res.json({ success: true, id });
+});
+
+// --- ADMIN: Save / Update Hotel Profile Info ---
+app.post("/api/pms/hotel-info/save", (req, res) => {
+  const { name, address, phone, email, starRating, checkInTime, checkOutTime, currency, taxRate, serviceCharge, totalRooms } = req.body;
+
+  if (name) hotelInfoData.name = name;
+  if (address !== undefined) hotelInfoData.address = address;
+  if (phone !== undefined) hotelInfoData.phone = phone;
+  if (email !== undefined) hotelInfoData.email = email;
+  if (starRating !== undefined) hotelInfoData.starRating = Number(starRating);
+  if (checkInTime !== undefined) hotelInfoData.checkInTime = checkInTime;
+  if (checkOutTime !== undefined) hotelInfoData.checkOutTime = checkOutTime;
+  if (currency !== undefined) hotelInfoData.currency = currency;
+  if (taxRate !== undefined) hotelInfoData.taxRate = Number(taxRate);
+  if (serviceCharge !== undefined) hotelInfoData.serviceCharge = Number(serviceCharge);
+  if (totalRooms !== undefined) hotelInfoData.totalRooms = Number(totalRooms) || roomsData.length;
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Hotel Administrator",
+    action: "Hotel Profile Updated",
+    details: `Updated hotel profile: ${hotelInfoData.name}, Address: ${hotelInfoData.address}`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("HOTEL_INFO_UPDATED", { hotelInfo: hotelInfoData, log });
+  res.json({ success: true, hotelInfo: hotelInfoData });
+});
+
+// --- ADMIN: Save / Edit Physical Room Inventory & Category Assignment ---
+app.post("/api/pms/admin/rooms/save", (req, res) => {
+  const { id, number, floor, typeId, rate, notes, housekeeper, status } = req.body;
+  if (!number || !typeId) {
+    return res.status(400).json({ error: "Room Number and Room Category are required" });
+  }
+
+  const selectedCategory = roomTypesData.find(t => t.id === typeId) || roomTypesData[0];
+  const roomRate = Number(rate) || selectedCategory.baseRate;
+  const roomFloor = Number(floor) || parseInt(number.charAt(0)) || 1;
+
+  let existingIdx = roomsData.findIndex(r => r.id === id || r.number === number);
+  let savedRoom;
+
+  if (existingIdx >= 0) {
+    roomsData[existingIdx] = {
+      ...roomsData[existingIdx],
+      number: String(number),
+      floor: roomFloor,
+      typeId: selectedCategory.id,
+      typeName: selectedCategory.name,
+      rate: roomRate,
+      notes: notes !== undefined ? notes : roomsData[existingIdx].notes,
+      housekeeper: housekeeper !== undefined ? housekeeper : roomsData[existingIdx].housekeeper,
+      status: status || roomsData[existingIdx].status || "vacant_clean"
+    };
+    savedRoom = roomsData[existingIdx];
+  } else {
+    const newRoomId = id || `room-${Date.now()}`;
+    savedRoom = {
+      id: newRoomId,
+      number: String(number),
+      floor: roomFloor,
+      typeId: selectedCategory.id,
+      typeName: selectedCategory.name,
+      rate: roomRate,
+      status: status || "vacant_clean",
+      housekeeper: housekeeper || "Unassigned",
+      notes: notes || "",
+      lastCleanedAt: new Date().toISOString()
+    };
+    roomsData.push(savedRoom);
+  }
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Hotel Administrator",
+    action: "Physical Room Inventory Updated",
+    details: `Saved room #${savedRoom.number} assigned to category '${savedRoom.typeName}' (Floor ${savedRoom.floor})`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("ROOMS_UPDATED", { rooms: roomsData, log });
+  res.json({ success: true, room: savedRoom, rooms: roomsData });
+});
+
+// --- ADMIN: Delete Physical Room ---
+app.post("/api/pms/admin/rooms/delete", (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "Room ID is required" });
+
+  const room = roomsData.find(r => r.id === id);
+  if (room && room.status.startsWith("occupied")) {
+    return res.status(400).json({ error: "Cannot delete an occupied room with active in-house guests!" });
+  }
+
+  roomsData = roomsData.filter(r => r.id !== id);
+
+  const log = {
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    staff: "Hotel Administrator",
+    action: "Room Inventory Deleted",
+    details: `Deleted room #${room?.number || id} from hotel inventory`
+  };
+  auditLogs.unshift(log);
+
+  broadcastUpdate("ROOMS_UPDATED", { rooms: roomsData, log });
+  res.json({ success: true, id, rooms: roomsData });
 });
 
 // --- SETTINGS: Save/Update Rate Period ---

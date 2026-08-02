@@ -196,5 +196,19 @@ export interface UserAccount {
   allowedViews: ActiveView[];
 }
 
+export interface HotelInfo {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  starRating: number;
+  checkInTime: string;
+  checkOutTime: string;
+  currency: string;
+  taxRate: number;
+  serviceCharge: number;
+  totalRooms: number;
+}
+
 export type TerminalMode = "front_desk" | "housekeeping" | "manager" | "split_terminal";
-export type ActiveView = "tape_chart" | "front_desk" | "housekeeping" | "reservations" | "night_audit" | "reports" | "settings";
+export type ActiveView = "tape_chart" | "front_desk" | "housekeeping" | "reservations" | "night_audit" | "reports" | "settings" | "admin";
