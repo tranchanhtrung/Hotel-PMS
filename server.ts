@@ -2,6 +2,15 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import {
+  getFirestoreDb,
+  isDbConnected,
+  saveCollectionItems,
+  saveDocument,
+  loadCollection,
+  loadDocument
+} from "./src/db/firestore";
+import { generateAzureSqlScript, HotelDatabasePayload } from "./src/db/azureExport";
 
 const app = express();
 const PORT = 3000;
@@ -400,7 +409,133 @@ function broadcastUpdate(eventType: string, payload: any) {
       // client disconnected
     }
   });
+  // Auto-sync mutation to Cloud Firestore in background
+  syncAllToCloudDatabase().catch(err => console.error("Cloud DB auto-sync error:", err));
 }
+
+// --- Cloud Database Synchronizer ---
+async function syncAllToCloudDatabase() {
+  if (!isDbConnected()) return;
+  try {
+    await saveDocument("pms_settings", "hotel_info", hotelInfoData);
+    await saveDocument("pms_settings", "business_date", { businessDate });
+    await saveCollectionItems("room_types", roomTypesData);
+    await saveCollectionItems("rate_periods", ratePeriodsData);
+    await saveCollectionItems("service_rates", serviceRatesData);
+    await saveCollectionItems("rooms", roomsData);
+    await saveCollectionItems("housekeepers", housekeepersData);
+    await saveCollectionItems("reservations", reservationsData);
+    await saveCollectionItems("folios", foliosData);
+    await saveCollectionItems("audit_logs", auditLogs);
+    await saveCollectionItems("submitted_reports", submittedReportsData);
+  } catch (err) {
+    console.error("Failed to sync to Cloud Database:", err);
+  }
+}
+
+async function loadDataFromCloudDatabase() {
+  if (!isDbConnected()) return false;
+  try {
+    console.log("[Cloud DB] Checking for existing operational data in Firestore...");
+    const dbRooms = await loadCollection<any>("rooms");
+    if (dbRooms && dbRooms.length > 0) {
+      roomsData = dbRooms;
+      console.log(`[Cloud DB] Loaded ${dbRooms.length} rooms from Firestore`);
+
+      const dbRoomTypes = await loadCollection<any>("room_types");
+      if (dbRoomTypes && dbRoomTypes.length > 0) roomTypesData = dbRoomTypes;
+
+      const dbRatePeriods = await loadCollection<any>("rate_periods");
+      if (dbRatePeriods && dbRatePeriods.length > 0) ratePeriodsData = dbRatePeriods;
+
+      const dbServiceRates = await loadCollection<any>("service_rates");
+      if (dbServiceRates && dbServiceRates.length > 0) serviceRatesData = dbServiceRates;
+
+      const dbHousekeepers = await loadCollection<any>("housekeepers");
+      if (dbHousekeepers && dbHousekeepers.length > 0) housekeepersData = dbHousekeepers;
+
+      const dbReservations = await loadCollection<any>("reservations");
+      if (dbReservations && dbReservations.length > 0) reservationsData = dbReservations;
+
+      const dbFolios = await loadCollection<any>("folios");
+      if (dbFolios && dbFolios.length > 0) foliosData = dbFolios;
+
+      const dbAuditLogs = await loadCollection<any>("audit_logs");
+      if (dbAuditLogs && dbAuditLogs.length > 0) auditLogs = dbAuditLogs;
+
+      const dbReports = await loadCollection<any>("submitted_reports");
+      if (dbReports && dbReports.length > 0) submittedReportsData = dbReports;
+
+      const dbHotelInfo = await loadDocument<any>("pms_settings", "hotel_info");
+      if (dbHotelInfo) hotelInfoData = { ...hotelInfoData, ...dbHotelInfo };
+
+      const dbBizDate = await loadDocument<any>("pms_settings", "business_date");
+      if (dbBizDate && dbBizDate.businessDate) businessDate = dbBizDate.businessDate;
+
+      return true;
+    } else {
+      console.log("[Cloud DB] Collections empty. Seeding initial operational data into Cloud Firestore...");
+      await syncAllToCloudDatabase();
+      return true;
+    }
+  } catch (err) {
+    console.error("[Cloud DB] Error loading from Firestore:", err);
+    return false;
+  }
+}
+
+// --- Database Status & Management Endpoints ---
+app.get("/api/pms/database/status", (req, res) => {
+  res.json({
+    connected: isDbConnected(),
+    provider: "Firebase Firestore Cloud DB",
+    schema: "GrandStay_PMS_v1",
+    totalRooms: roomsData.length,
+    totalReservations: reservationsData.length,
+    totalFolios: foliosData.length,
+    totalAuditLogs: auditLogs.length,
+    azureReady: true
+  });
+});
+
+app.post("/api/pms/database/sync", async (req, res) => {
+  await syncAllToCloudDatabase();
+  res.json({
+    success: true,
+    message: "Operational data synced to Cloud Database",
+    connected: isDbConnected()
+  });
+});
+
+app.get("/api/pms/database/export", (req, res) => {
+  const format = (req.query.format as string) || "json";
+
+  const payload: HotelDatabasePayload = {
+    hotelInfo: hotelInfoData,
+    businessDate,
+    roomTypes: roomTypesData,
+    ratePeriods: ratePeriodsData,
+    serviceRates: serviceRatesData,
+    rooms: roomsData,
+    housekeepers: housekeepersData,
+    reservations: reservationsData,
+    folios: foliosData,
+    auditLogs,
+    submittedReports: submittedReportsData,
+    userAccounts: []
+  };
+
+  if (format === "sql" || format === "azure") {
+    const sqlScript = generateAzureSqlScript(payload);
+    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Content-Disposition", 'attachment; filename="grand_stay_azure_sql.sql"');
+    return res.send(sqlScript);
+  }
+
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", 'attachment; filename="grand_stay_database_export.json"');
+  res.json(payload);
+});
 
 // --- SSE Endpoint ---
 app.get("/api/pms/events", (req, res) => {
@@ -1613,6 +1748,14 @@ Provide a concise, professional 4-bullet executive briefing for the Hotel Owner/
 
 // --- Serve Vite in Dev / Static in Prod ---
 async function startServer() {
+  // Initialize Cloud Database
+  try {
+    getFirestoreDb();
+    await loadDataFromCloudDatabase();
+  } catch (err) {
+    console.error("[Database] Initialization error:", err);
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },

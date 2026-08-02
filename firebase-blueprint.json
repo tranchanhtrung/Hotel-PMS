@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "hotel_info": {
+      "title": "Hotel Profile & Settings",
+      "description": "Hotel profile information, check-in/out times, currency, tax rates, and total room capacity.",
+      "fields": {
+        "name": { "type": "string", "description": "Hotel brand name" },
+        "address": { "type": "string", "description": "Street address" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "email": { "type": "string", "description": "Official email address" },
+        "starRating": { "type": "number", "description": "Hotel star classification rating" },
+        "checkInTime": { "type": "string", "description": "Default check-in time" },
+        "checkOutTime": { "type": "string", "description": "Default check-out time" },
+        "currency": { "type": "string", "description": "Operating currency symbol or code" },
+        "taxRate": { "type": "number", "description": "VAT tax rate percentage" },
+        "serviceCharge": { "type": "number", "description": "Service charge percentage" },
+        "totalRooms": { "type": "number", "description": "Total physical room count" }
+      }
+    },
+    "rooms": {
+      "title": "Physical Room Inventory",
+      "description": "Physical hotel rooms, floor placement, cleanliness state, and housekeeper assignments.",
+      "fields": {
+        "number": { "type": "string", "description": "Room number code" },
+        "floor": { "type": "number", "description": "Floor level" },
+        "typeId": { "type": "string", "description": "Room category reference ID" },
+        "typeName": { "type": "string", "description": "Room category display name" },
+        "rate": { "type": "number", "description": "Base night rate in thousands VNĐ" },
+        "status": { "type": "string", "description": "Status: vacant_clean, vacant_dirty, occupied_clean, occupied_dirty, out_of_order" },
+        "housekeeper": { "type": "string", "description": "Assigned housekeeper name" },
+        "notes": { "type": "string", "description": "Maintenance log or room notes" },
+        "lastCleanedAt": { "type": "string", "description": "ISO timestamp of last cleaning" }
+      }
+    },
+    "room_types": {
+      "title": "Room Categories",
+      "description": "Room type definitions, base rates, max guests, and capacity.",
+      "fields": {
+        "name": { "type": "string", "description": "Category name" },
+        "baseRate": { "type": "number", "description": "Default rate per night" },
+        "maxGuests": { "type": "number", "description": "Maximum guest occupancy limit" },
+        "total": { "type": "number", "description": "Total rooms allocated to category" },
+        "description": { "type": "string", "description": "Category amenities and details" }
+      }
+    },
+    "rate_periods": {
+      "title": "Seasonal Rate Periods",
+      "description": "Tariff rule configurations for peak seasons, holidays, and low season discounts.",
+      "fields": {
+        "name": { "type": "string", "description": "Season/period title" },
+        "startDate": { "type": "string", "description": "Start date YYYY-MM-DD" },
+        "endDate": { "type": "string", "description": "End date YYYY-MM-DD" },
+        "multiplier": { "type": "number", "description": "Price multiplier ratio" },
+        "isDefault": { "type": "boolean", "description": "Is default standard rate" },
+        "notes": { "type": "string", "description": "Notes" }
+      }
+    },
+    "service_rates": {
+      "title": "Service & Minibar Tariffs",
+      "description": "Minibar, laundry, extra bed, late checkout, and POS add-on price menu.",
+      "fields": {
+        "category": { "type": "string", "description": "Category: water, laundry, late_checkout, extra_bed, other" },
+        "name": { "type": "string", "description": "Service item name" },
+        "unit": { "type": "string", "description": "Unit of measurement" },
+        "rate": { "type": "number", "description": "Price rate in thousands VNĐ" },
+        "description": { "type": "string", "description": "Service details" },
+        "isAvailable": { "type": "boolean", "description": "Availability flag" }
+      }
+    },
+    "housekeepers": {
+      "title": "Housekeeping Staff",
+      "description": "Housekeeping attendants and staff roster.",
+      "fields": {
+        "name": { "type": "string", "description": "Attendant full name" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "status": { "type": "string", "description": "Active or Inactive status" }
+      }
+    },
+    "reservations": {
+      "title": "Guest Bookings & Reservations",
+      "description": "Reservations, guest details, check-in/out dates, status, and payment summary.",
+      "fields": {
+        "confirmationCode": { "type": "string", "description": "Unique confirmation code (e.g., GS-8912)" },
+        "guestName": { "type": "string", "description": "Primary guest full name" },
+        "guestPhone": { "type": "string", "description": "Primary guest phone" },
+        "guestEmail": { "type": "string", "description": "Primary guest email" },
+        "guestIdNumber": { "type": "string", "description": "Passport or ID card number" },
+        "roomId": { "type": "string", "description": "Assigned room ID" },
+        "roomNumber": { "type": "string", "description": "Assigned room number" },
+        "roomTypeName": { "type": "string", "description": "Room category name" },
+        "checkInDate": { "type": "string", "description": "Check-in date YYYY-MM-DD" },
+        "checkOutDate": { "type": "string", "description": "Check-out date YYYY-MM-DD" },
+        "status": { "type": "string", "description": "Status: confirmed, checked_in, checked_out, cancelled" },
+        "totalAmount": { "type": "number", "description": "Total reservation charge" },
+        "paidAmount": { "type": "number", "description": "Amount paid/deposited" },
+        "channel": { "type": "string", "description": "Booking source channel" },
+        "adults": { "type": "number", "description": "Adult count" },
+        "children": { "type": "number", "description": "Children count" },
+        "keycardAssigned": { "type": "string", "description": "Issued keycard identifier" },
+        "createdAt": { "type": "string", "description": "Timestamp created" }
+      }
+    },
+    "folios": {
+      "title": "Guest Folios & Billing",
+      "description": "Detailed line-item folios and payment transactions for room stays.",
+      "fields": {
+        "reservationId": { "type": "string", "description": "Associated reservation ID" },
+        "guestName": { "type": "string", "description": "Guest name" },
+        "roomNumber": { "type": "string", "description": "Room number" }
+      }
+    },
+    "audit_logs": {
+      "title": "Audit & Operation Activity Logs",
+      "description": "System and staff activity audit trails.",
+      "fields": {
+        "timestamp": { "type": "string", "description": "Activity timestamp" },
+        "staff": { "type": "string", "description": "Staff member or system actor" },
+        "action": { "type": "string", "description": "Operation action title" },
+        "details": { "type": "string", "description": "Detailed log description" }
+      }
+    },
+    "submitted_reports": {
+      "title": "Submitted EOD & Department Reports",
+      "description": "Night audit and housekeeping reports transferred to finance/accounting.",
+      "fields": {
+        "reportRefNumber": { "type": "string", "description": "Report reference number" },
+        "reportType": { "type": "string", "description": "Report type" },
+        "department": { "type": "string", "description": "Target department" },
+        "businessDate": { "type": "string", "description": "Business date" },
+        "submittedAt": { "type": "string", "description": "Submission timestamp" },
+        "submittedBy": { "type": "string", "description": "Submitted by staff name" },
+        "status": { "type": "string", "description": "Approval/audit status" }
+      }
+    }
+  }
+}

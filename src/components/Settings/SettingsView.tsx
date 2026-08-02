@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePms } from "../../context/PmsContext";
 import {
   Sliders,
@@ -24,7 +24,14 @@ import {
   Tag,
   Search,
   Power,
-  X
+  X,
+  Database,
+  Cloud,
+  Download,
+  RefreshCw,
+  Server,
+  HardDrive,
+  CheckCircle
 } from "lucide-react";
 import { RoomType, RatePeriod, ServiceCategory, ServiceRateItem } from "../../types";
 import { formatVND } from "../../utils/formatters";
@@ -46,7 +53,51 @@ export const SettingsView: React.FC = () => {
     toggleServiceRate
   } = usePms();
 
-  const [activeSubTab, setActiveSubTab] = useState<"room_types" | "rate_periods" | "rate_matrix" | "service_rates">("service_rates");
+  const [activeSubTab, setActiveSubTab] = useState<"room_types" | "rate_periods" | "rate_matrix" | "service_rates" | "database">("service_rates");
+
+  // Database Status State
+  const [dbStatus, setDbStatus] = useState<{
+    connected: boolean;
+    provider: string;
+    schema: string;
+    totalRooms: number;
+    totalReservations: number;
+    totalFolios: number;
+    totalAuditLogs: number;
+    azureReady: boolean;
+  } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const fetchDbStatus = async () => {
+    try {
+      const res = await fetch("/api/pms/database/status");
+      if (res.ok) {
+        const data = await res.json();
+        setDbStatus(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch database status:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchDbStatus();
+  }, []);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/pms/database/sync", { method: "POST" });
+      if (res.ok) {
+        showNotification(language === "en" ? "Data successfully synced to Cloud Firestore Database!" : "Đã đồng bộ dữ liệu vào Cloud Firestore Database thành công!");
+        await fetchDbStatus();
+      }
+    } catch (e) {
+      showNotification(language === "en" ? "Database sync failed." : "Lỗi đồng bộ cơ sở dữ liệu.", "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Helper function for localizing service item properties
   const formatUnit = (unit: string) => {
@@ -563,7 +614,164 @@ export const SettingsView: React.FC = () => {
           <Layers className="w-4 h-4" />
           <span>Period Rate Comparison Matrix</span>
         </button>
+
+        <button
+          onClick={() => setActiveSubTab("database")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition ${
+            activeSubTab === "database"
+              ? "border-sky-500 text-sky-400 bg-slate-900/60 rounded-t-xl"
+              : "border-transparent text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Database className="w-4 h-4 text-sky-400" />
+          <span>Cloud Database & Azure Migration</span>
+        </button>
       </div>
+
+      {/* --- TAB: CLOUD DATABASE & AZURE MIGRATION --- */}
+      {activeSubTab === "database" && (
+        <div className="space-y-6">
+          {/* Cloud Database Live Status Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-wrap justify-between items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-sky-500/10 border border-sky-500/30 text-sky-400 rounded-2xl">
+                  <Database className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    {language === "en" ? "Cloud Database Persistence (Firebase Firestore)" : "Cơ Sở Dữ Liệu Đám Mây (Firebase Firestore)"}
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      {dbStatus?.connected ? (language === "en" ? "Live Connected" : "Đã Kết Nối Thực Tế") : (language === "en" ? "Connecting..." : "Đang kết nối...")}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {language === "en"
+                      ? "Hotel operation data (rooms, bookings, folios, tariffs, audit logs) is stored persistently in Cloud Firestore and auto-synced across clients."
+                      : "Dữ liệu vận hành khách sạn (phòng, đặt phòng, hóa đơn, bảng giá, nhật ký) được lưu trữ bền vững trên Cloud Firestore và tự động đồng bộ."}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-sky-500/10 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
+                <span>{isSyncing ? (language === "en" ? "Syncing..." : "Đang Đồng Bộ...") : (language === "en" ? "Force Database Sync" : "Đồng Bộ Ngay")}</span>
+              </button>
+            </div>
+
+            {/* Metrics Breakdown */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-800">
+              <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{language === "en" ? "Total Rooms Inventory" : "Tổng Số Phòng"}</span>
+                <span className="text-2xl font-mono font-bold text-amber-400 mt-1 block">{dbStatus?.totalRooms || 72} {language === "en" ? "Rooms" : "Phòng"}</span>
+              </div>
+
+              <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{language === "en" ? "Active Reservations" : "Đặt Phòng Đã Lưu"}</span>
+                <span className="text-2xl font-mono font-bold text-emerald-400 mt-1 block">{dbStatus?.totalReservations || 0} {language === "en" ? "Bookings" : "Đơn"}</span>
+              </div>
+
+              <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{language === "en" ? "Stored Guest Folios" : "Hóa Đơn Folio"}</span>
+                <span className="text-2xl font-mono font-bold text-sky-400 mt-1 block">{dbStatus?.totalFolios || 0} {language === "en" ? "Folios" : "Hóa Đơn"}</span>
+              </div>
+
+              <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{language === "en" ? "Audit Log Entries" : "Nhật Ký Thao Tác"}</span>
+                <span className="text-2xl font-mono font-bold text-purple-400 mt-1 block">{dbStatus?.totalAuditLogs || 0} {language === "en" ? "Logs" : "Ghi Chú"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Azure Cloud Export & Migration Tools */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-2xl">
+                <Cloud className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  {language === "en" ? "Azure Cloud Migration & Database Export" : "Xuất Dữ Liệu & Cấu Hình Chuyển Sang Azure Cloud"}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {language === "en"
+                    ? "Generate Azure SQL DDL scripts or JSON data payload for seamless deployment to Microsoft Azure Cloud Infrastructure."
+                    : "Tạo kịch bản Azure SQL DDL hoặc tệp JSON dữ liệu chuẩn bị cho việc triển khai lên hạ tầng Microsoft Azure Cloud."}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {/* Azure SQL Export Option */}
+              <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between space-y-4 hover:border-slate-700 transition">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
+                    <Server className="w-4 h-4" />
+                    <span>Azure SQL Database Script (.sql)</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {language === "en"
+                      ? "Exports full SQL schema, relational tables (HotelInfo, RoomTypes, Rooms, Reservations, Housekeepers, AuditLogs) and INSERT records formatted for Azure SQL / SQL Server."
+                      : "Xuất toàn bộ cấu trúc bảng chuẩn T-SQL và lệnh INSERT (HotelInfo, RoomTypes, Rooms, Reservations...) tương thích hoàn toàn với Azure SQL Database."}
+                  </p>
+                </div>
+
+                <a
+                  href="/api/pms/database/export?format=sql"
+                  download="grand_stay_azure_sql.sql"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-blue-500/10"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{language === "en" ? "Download Azure SQL Script (.sql)" : "Tải Kịch Bản Azure SQL (.sql)"}</span>
+                </a>
+              </div>
+
+              {/* JSON Payload Export Option */}
+              <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between space-y-4 hover:border-slate-700 transition">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                    <HardDrive className="w-4 h-4" />
+                    <span>Azure Cosmos DB / NoSQL JSON (.json)</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {language === "en"
+                      ? "Exports complete document structure for Azure Cosmos DB (MongoDB/Core API), PostgreSQL JSONB, or Firebase cloud backups."
+                      : "Xuất toàn bộ cấu trúc dữ liệu JSON để nhập trực tiếp vào Azure Cosmos DB, Azure Database for PostgreSQL hoặc sao lưu Đám mây."}
+                  </p>
+                </div>
+
+                <a
+                  href="/api/pms/database/export?format=json"
+                  download="grand_stay_database_export.json"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl text-xs transition border border-slate-700"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{language === "en" ? "Download JSON Payload (.json)" : "Tải Dữ Liệu JSON (.json)"}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Step by Step Azure Cloud Setup Guide */}
+            <div className="bg-slate-950/50 border border-slate-800 p-4 rounded-xl space-y-3 text-xs">
+              <h4 className="font-bold text-slate-200 flex items-center gap-2">
+                <Info className="w-4 h-4 text-sky-400" />
+                <span>{language === "en" ? "Deployment Steps for Azure Cloud Hosting:" : "Các Bước Hướng Dẫn Cấu Hình Lên Azure Cloud:"}</span>
+              </h4>
+              <ol className="list-decimal list-inside space-y-1.5 text-slate-400 leading-relaxed">
+                <li>{language === "en" ? "Create an Azure Resource Group in your Azure Portal (Portal.azure.com)." : "Tạo Resource Group trên trang quản trị Azure Portal (portal.azure.com)."}</li>
+                <li>{language === "en" ? "Provision an Azure SQL Database (Standard S0 or Serverless tier)." : "Khởi tạo một instance Azure SQL Database (Serverless hoặc Standard S0)."}</li>
+                <li>{language === "en" ? "Run the downloaded grand_stay_azure_sql.sql script using Azure Data Studio or SQL Server Management Studio (SSMS)." : "Chạy kịch bản grand_stay_azure_sql.sql đã tải về bằng Azure Data Studio hoặc SSMS."}</li>
+                <li>{language === "en" ? "Deploy this App Service container or Node.js Web App on Azure App Service." : "Triển khai dịch vụ Web App trên Azure App Service kết nối tới chuỗi kết nối Database Azure."}</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- TAB: SERVICE & EXTRA FEE RATES --- */}
       {activeSubTab === "service_rates" && (
