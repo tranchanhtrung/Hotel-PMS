@@ -58,10 +58,10 @@ export const Header: React.FC = () => {
     { id: "front_desk", labelKey: "frontDesk", defaultLabel: "Front Desk & Folios", icon: <UserCheck className="w-4 h-4" /> },
     { id: "housekeeping", labelKey: "housekeeping", defaultLabel: "Housekeeping", icon: <Zap className="w-4 h-4" /> },
     { id: "reservations", labelKey: "bookingsOta", defaultLabel: "Bookings & OTA", icon: <CalendarDays className="w-4 h-4" /> },
+    { id: "night_audit", labelKey: "nightAudit", defaultLabel: "Night Audit & Logs", icon: <ShieldAlert className="w-4 h-4" /> },
     { id: "reports", labelKey: "reports", defaultLabel: "Reports & Audit", icon: <FileText className="w-4 h-4" /> },
     { id: "settings", labelKey: "settings", defaultLabel: "Room & Period Rates", icon: <Sliders className="w-4 h-4" /> },
     { id: "admin", labelKey: "admin", defaultLabel: "Admin Setup", icon: <Building2 className="w-4 h-4" /> },
-    { id: "night_audit", labelKey: "nightAudit", defaultLabel: "Night Audit & Logs", icon: <ShieldAlert className="w-4 h-4" /> },
   ];
 
   const getRoleLabelKey = (role: string) => {
