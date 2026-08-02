@@ -170,9 +170,9 @@ export const FolioModal: React.FC = () => {
         {isPrintPreview ? (
           <div className="bg-white text-slate-900 p-3 sm:p-6 rounded-xl space-y-3 sm:space-y-4 font-mono text-xs">
             <div className="text-center border-b pb-3">
-              <h2 className="font-bold text-sm sm:text-base">GRAND STAY HOTEL</h2>
-              <p className="text-[9px] sm:text-[10px] text-slate-600">Economy Hotel Management System</p>
-              <p className="text-[9px] sm:text-[10px] text-slate-600">Date: {businessDate} | <strong>Currency: VNĐ</strong></p>
+              <h2 className="font-bold text-sm sm:text-base uppercase">{hotelInfo?.name || "GRAND STAY HOTEL"}</h2>
+              <p className="text-[9px] sm:text-[10px] text-slate-600">{hotelInfo?.address || "123 Vo Van Kiet Boulevard, District 1, Ho Chi Minh City"}</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-600">Date: {businessDate} | <strong>Currency: {hotelInfo?.currency || "VNĐ"}</strong></p>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between text-[10px] sm:text-[11px] border-b pb-2 gap-1.5 sm:gap-0">
@@ -275,7 +275,7 @@ export const FolioModal: React.FC = () => {
             </div>
 
             <div className="text-center text-[10px] text-slate-500 pt-4 border-t">
-              Thank you for staying at Grand Stay Hotel!
+              Thank you for staying at {hotelInfo?.name || "Grand Stay Hotel"}!
             </div>
 
             <div className="flex gap-2 pt-2 no-print">
