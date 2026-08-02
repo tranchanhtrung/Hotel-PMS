@@ -33,7 +33,7 @@ function AppContent() {
   const isViewAllowed = canAccessView(activeView);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col antialiased">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col antialiased overflow-x-hidden w-full max-w-full">
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">

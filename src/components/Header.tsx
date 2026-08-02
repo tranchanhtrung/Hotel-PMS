@@ -80,51 +80,48 @@ export const Header: React.FC = () => {
   return (
     <header className="bg-slate-900 text-slate-100 border-b border-slate-800 sticky top-0 z-40 shadow-md">
       {/* Top bar: Stats & Real-Time Sync status */}
-      <div className="max-w-7xl mx-auto px-4 py-2 text-xs flex flex-wrap items-center justify-between border-b border-slate-800/80 gap-2">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
-            <Hotel className="w-5 h-5 text-amber-500" />
-            <span>{t("hotelName")}</span>
-            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 text-xs flex flex-wrap items-center justify-between border-b border-slate-800/80 gap-2 overflow-x-hidden">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-amber-400 font-semibold text-xs sm:text-sm">
+            <Hotel className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
+            <span className="truncate max-w-[120px] sm:max-w-none">{t("hotelName")}</span>
+            <span className="text-[9px] sm:text-[10px] bg-amber-500/20 text-amber-300 px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-500/30 shrink-0">
               {t("roomsEconomy")}
             </span>
           </div>
 
           <div className="h-4 w-px bg-slate-700 hidden sm:block" />
 
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-400">{t("businessDate")}:</span>
+          <div className="flex items-center gap-1 text-slate-300 text-[11px] sm:text-xs">
+            <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="text-slate-400 hidden xs:inline">{t("businessDate")}:</span>
             <span className="font-mono font-medium text-amber-200">{businessDate}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
+          <div className="hidden md:flex items-center gap-1.5 text-slate-300">
+            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span className="text-slate-400">{t("checkInTimeHeader")}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 ml-auto">
           {/* Logged in User Badge & Switch Role */}
           <button
             onClick={() => setIsAuthModalOpen(true)}
             id="btn-user-role-badge"
             title="Click to Switch Staff Account or Permission Role"
-            className="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 text-slate-100 px-2.5 py-1 rounded-lg border border-amber-500/40 shadow-sm transition group cursor-pointer"
+            className="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-800 text-slate-100 px-2 py-1 rounded-lg border border-amber-500/40 shadow-sm transition group cursor-pointer text-[11px]"
           >
-            <span className="text-base leading-none">{currentUser?.avatar}</span>
-            <div className="text-left leading-tight">
-              <div className="font-semibold text-amber-300 text-[11px] group-hover:text-amber-200 flex items-center gap-1">
-                <span>{currentUser?.name}</span>
-                <span className="text-[9px] bg-slate-900 text-slate-300 px-1 py-0.2 rounded border border-slate-700 font-mono uppercase">
+            <span className="text-sm leading-none">{currentUser?.avatar}</span>
+            <div className="text-left leading-tight hidden xs:block">
+              <div className="font-semibold text-amber-300 text-[10px] sm:text-[11px] group-hover:text-amber-200 flex items-center gap-1">
+                <span className="truncate max-w-[70px] sm:max-w-none">{currentUser?.name}</span>
+                <span className="text-[8px] sm:text-[9px] bg-slate-900 text-slate-300 px-1 py-0.2 rounded border border-slate-700 font-mono uppercase">
                   {currentUser?.role}
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 truncate max-w-[130px] hidden sm:block">
-                {t(getRoleLabelKey(currentUser?.role || "admin"))}
-              </div>
             </div>
-            <span className="text-[10px] bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded ml-1 group-hover:bg-amber-400 transition">
+            <span className="text-[9px] sm:text-[10px] bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded group-hover:bg-amber-400 transition">
               {t("switchRoleBtn")}
             </span>
           </button>
@@ -134,10 +131,10 @@ export const Header: React.FC = () => {
             onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
             id="btn-language-toggle"
             title="Switch Language / Chuyển Đổi Ngôn Ngữ"
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold px-2.5 py-1 rounded-md border border-slate-700 text-xs transition shadow-sm"
+            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold px-2 py-1 rounded-md border border-slate-700 text-[11px] sm:text-xs transition shadow-sm cursor-pointer"
           >
-            <Globe className="w-3.5 h-3.5 text-amber-400" />
-            <span>{language === "vi" ? "🇻🇳 Tiếng Việt" : "🇬🇧 English"}</span>
+            <Globe className="w-3 h-3 text-amber-400 shrink-0" />
+            <span>{language === "vi" ? "🇻🇳 VI" : "🇬🇧 EN"}</span>
           </button>
 
           {/* Theme Mode Toggle */}
@@ -145,25 +142,25 @@ export const Header: React.FC = () => {
             onClick={toggleTheme}
             id="btn-theme-toggle"
             title={language === "vi" ? "Chuyển giao diện sáng/tối" : "Toggle Light/Dark Theme"}
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold px-2.5 py-1 rounded-md border border-slate-700 text-xs transition shadow-sm cursor-pointer"
+            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold px-2 py-1 rounded-md border border-slate-700 text-[11px] sm:text-xs transition shadow-sm cursor-pointer"
           >
             {theme === "light" ? (
               <>
-                <Sun className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                <span>{t("lightMode")}</span>
+                <Sun className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                <span className="hidden xs:inline">{t("lightMode")}</span>
               </>
             ) : (
               <>
-                <Moon className="w-3.5 h-3.5 text-amber-400" />
-                <span>{t("darkMode")}</span>
+                <Moon className="w-3 h-3 text-amber-400 shrink-0" />
+                <span className="hidden xs:inline">{t("darkMode")}</span>
               </>
             )}
           </button>
 
           {/* Realtime Status Indicator */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700">
-            <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-rose-500"}`} />
-            <span className="text-[11px] text-slate-300">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px]">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-rose-500"}`} />
+            <span className="text-[10px] sm:text-[11px] text-slate-300">
               {isConnected ? t("realTimeSync") : "Connecting..."}
             </span>
           </div>
@@ -187,9 +184,9 @@ export const Header: React.FC = () => {
           <button
             onClick={() => setIsAiModalOpen(true)}
             id="btn-ai-insights"
-            className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-semibold px-3 py-1 rounded-md transition shadow-sm text-xs"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-semibold px-2.5 py-1 rounded-md transition shadow-sm text-[11px] sm:text-xs cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
             <span>{t("aiBriefing")}</span>
           </button>
         </div>
